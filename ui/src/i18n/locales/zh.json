@@ -1,0 +1,20 @@
+{
+    "appName": "后台管理模板",
+    "dateLocal": "zh-cn",
+    "settings": {
+        "light": "白天",
+        "dark": "夜里"
+    },
+    "menu": {
+        "home": "首页",
+        "workflow": "工作流",
+        "components": "组件库",
+        "form": "表单",
+        "table": "表格",
+        "richTextEditor": "富文本编辑",
+        "contentDisplay": "内容展示",
+        "dragZoomPopup": "拖拽缩放弹窗",
+        "editGrid": "编辑表格",
+        "filterAssemble": "过滤生成器"
+    }
+}

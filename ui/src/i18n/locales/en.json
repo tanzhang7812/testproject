@@ -1,0 +1,20 @@
+{
+    "appName": "Generic Backend Template",
+    "dateLocal": "en",
+    "settings": {
+        "light": "Light",
+        "dark": "Dark"
+    },
+    "menu": {
+        "home": "Home",
+        "workflow": "Workflow",
+        "components": "Components libary",
+        "form": "Form",
+        "table": "Table",
+        "richTextEditor": "Rich Text Editor",
+        "contentDisplay": "Content Display",
+        "dragZoomPopup": "Drag Zoom Popup",
+        "editGrid": "Edit Grid",
+        "filterAssemble":"Filter Assemble"
+    }
+}

@@ -1,0 +1,30 @@
+
+    #组件描述：
+    这是一个过滤条件的组装组件，可以用于根据条件组装过滤条件，生成以下结构的数据
+    [
+    {
+        "type": "andgroup",
+        "group": [
+            {"field": "name","funcfield": "name","operate": "IS_SAME","value": ["name"]},
+            {"field": "age","funcfield": "age","operate": "BETWEEN","value": [18,30]},
+            {"field": "birthday","funcfield": "birthday","operate": "ON","value": ["2024-01-01"]}
+        ]
+    },{
+        "type": "orgroup",
+        "group": [
+            {"field": "name","funcfield": "name","operate": "IS","value": ["Tom"]}
+        ]
+    }
+    ]
+    #组件需求：
+    1. fields 告诉组件有哪些字段，字段类型，字段名
+    2. operations 告诉组件有哪些操作符，操作符类型，操作符名
+    3. conditions 是组件的初始化条件，组件会根据conditions来生成组件的初始化状态
+    4. 组件是一个动态组件，每一行有这些输入框：
+        1. 字段选择框:一个select组件，根据fields的value来显示，value为name，label为header
+        2. 函数编辑框:一个不可编辑的input组件，点击后弹出函数编辑器，对于字段选择框中选中的字段添加函数。
+        3. 操作符选择框:一个select组件，根据选择的字段类型dataType去过滤operations(category用于过滤)，显示符合条件的操作符。
+        4. 值输入框: 根据操作符类型type来显示不同的输入框，text类型直接显示，oneof类型显示一个逗号分隔的输入框，field类型显示一个select组件，根据fields的value来显示，value为name，label为header，date类型显示一个日期选择框，number类型显示一个输入框，between类型显示两个输入框,输入框类型根据选择的field判断,none类型不显示。
+        5. 删除按钮：点击后删除当前行
+        6. or 按钮：点击后在当前行下面添加一个空行,并把当前行type设置为orgroup
+        7. and 按钮：点击后在当前行上面插入一个空行,并把当前行type设置为andgroup
