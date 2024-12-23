@@ -183,6 +183,7 @@ export const StyledAccordion = styled(Accordion)(({ theme }) => ({
 export const StyledResizableBox = styled(ResizableBox)(({ theme }) => ({
   position: 'relative',
   width: '100% !important',
+  // 移除可能导致 handleAxis 传递到 DOM 的样式
   '& .react-resizable-handle': {
     position: 'absolute',
     bottom: -4,
@@ -329,7 +330,6 @@ export const ComponentSettingHeader = styled(Box)(({ theme }) => ({
 export const ComponentSettingContent = styled(Box)({
   flex: 1,
   overflow: 'auto',
-  padding: '16px',
   transition: 'all 0.3s ease-in-out',
 });
 

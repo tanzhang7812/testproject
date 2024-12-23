@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import Box from '@mui/material/Box';
 import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
-import { styled } from '@mui/material/styles';
+import { styled, useTheme } from '@mui/material/styles';
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Button from '@mui/material/Button';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import Typography from '@mui/material/Typography';
+import { WorkflowError, WorkflowErrorItem } from './context/WorkflowContext';
 
 interface Message {
   id: string;
@@ -59,8 +60,8 @@ const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
 const StatusIcon = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'status'
 })<{ status: 'error' | 'warning' }>(({ theme, status }) => ({
-  color: status === 'error' 
-    ? theme.palette.error.main 
+  color: status === 'error'
+    ? theme.palette.error.main
     : theme.palette.warning.main,
   display: 'flex',
   alignItems: 'center',
@@ -73,7 +74,7 @@ const columns: GridColDef[] = [
     headerName: 'Status',
     width: 70,
     renderCell: (params) => (
-      <StatusIcon status={params.value}>
+      <StatusIcon status={params.value} sx={{ height: '30px', width: '30px' }}>
         {params.value === 'error' ? <ErrorIcon /> : <WarningIcon />}
       </StatusIcon>
     ),
@@ -84,7 +85,7 @@ const columns: GridColDef[] = [
     width: 130,
   },
   {
-    field: 'nodeName',
+    field: 'name',
     headerName: 'Node Name',
     width: 180,
   },
@@ -94,7 +95,7 @@ const columns: GridColDef[] = [
     flex: 1,
   },
   {
-    field: 'timestamp',
+    field: 'time',
     headerName: 'Time',
     width: 180,
   },
@@ -132,7 +133,6 @@ const GridHeader = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: theme.spacing(1, 1),
   borderBottom: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.background.paper,
 }));
@@ -141,65 +141,85 @@ const HeaderLeft = styled(Box)({
   display: 'flex',
   alignItems: 'center',
   gap: '16px',
+  height: '35px',
+  lineHeight: '35px',
+  marginLeft: '16px',
 });
 
 const HeaderRight = styled(Box)({
   display: 'flex',
   alignItems: 'center',
   gap: '8px',
+  height: '35px',
+  lineHeight: '35px',
 });
 
-export default function MessageGrid() {
-  const [viewType, setViewType] = useState('data');
+// 添加这些样式组件
+const ErrorLabel = styled('span')(({ theme }) => ({
+  fontSize: '0.875rem', // 14px
+}));
 
-  const handleExport = () => {
-    // 实现导出功能
-    console.log('Export to Excel');
+const WarningLabel = styled('span')(({ theme }) => ({
+  fontSize: '0.875rem', // 14px
+}));
+
+const NormalLabel = styled('span')({
+  fontSize: '0.875rem' // 14px
+});
+
+interface MessageGridProps {
+  errors: WorkflowErrorItem[];
+}
+
+export default function MessageGrid({ errors = [] }: MessageGridProps) {
+  const [viewType, setViewType] = useState('all'); // 修改初始值为 'all'
+  // 移除 filteredRows 状态，改用计算值
+  const theme = useTheme();
+  // 处理单选框变化
+  const handleFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setViewType(event.target.value);
   };
+
+  // 使用 useMemo 计算过滤后的行
+  const filteredRows = useMemo(() => {
+    if (viewType === 'all') {
+      return errors;
+    }
+    return errors.filter(row => row.status === viewType);
+  }, [errors, viewType]);
 
   return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <GridHeader>
         <HeaderLeft>
           <Typography variant="body2" color="text.secondary">
-            Total: {rows.length} records
+            Total: {filteredRows.length} records
           </Typography>
           <RadioGroup
             row
             value={viewType}
-            onChange={(e) => setViewType(e.target.value)}
-            sx={{
-              '& .MuiFormControlLabel-root': {
-                marginRight: 2,
-              },
-              '& .MuiRadio-root': {
-                padding: 0.5,
-                marginRight: 0.5,
-              },
-            }}
+            onChange={handleFilterChange}
+            sx={{ ml: 2 }}
           >
-            <FormControlLabel 
-              value="data" 
-              control={<Radio size="small" />} 
-              label={
-                <Typography variant="body2">
-                  Data
-                </Typography>
-              }
+            <FormControlLabel
+              value="all"
+              control={<Radio size="small" sx={{ color: theme.palette.text.primary, '&.Mui-checked': { color: theme.palette.text.primary } }} />}
+              label={<NormalLabel>All</NormalLabel>}
             />
-            <FormControlLabel 
-              value="metadata" 
-              control={<Radio size="small" />} 
-              label={
-                <Typography variant="body2">
-                  MetaData
-                </Typography>
-              }
+            <FormControlLabel
+              value="error"
+              control={<Radio size="small" sx={{ color: theme.palette.error.main, '&.Mui-checked': { color: theme.palette.error.main } }} />}
+              label={<ErrorLabel>Error</ErrorLabel>}
+            />
+            <FormControlLabel
+              value="warning"
+              control={<Radio size="small" sx={{ color: theme.palette.warning.main, '&.Mui-checked': { color: theme.palette.warning.main } }} />}
+              label={<WarningLabel>Warning</WarningLabel>}
             />
           </RadioGroup>
         </HeaderLeft>
         <HeaderRight>
-          <Button
+          {/* <Button
             size="small"
             variant="outlined"
             startIcon={<FileDownloadIcon />}
@@ -210,18 +230,18 @@ export default function MessageGrid() {
             }}
           >
             Export to Excel
-          </Button>
+          </Button> */}
         </HeaderRight>
       </GridHeader>
       <Box sx={{ flex: 1, overflow: 'hidden' }}>
         <DataGrid
-          rowHeight={36}
+          rowHeight={30}
           columnHeaderHeight={40}
-          rows={rows}
+          rows={filteredRows}
           columns={columns}
           initialState={{
             sorting: {
-              sortModel: [{ field: 'timestamp', sort: 'desc' }],
+              sortModel: [{ field: 'time', sort: 'desc' }],
             },
           }}
           hideFooter

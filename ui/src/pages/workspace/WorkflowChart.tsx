@@ -31,6 +31,10 @@ import cloneDeep from 'lodash/cloneDeep';
 import isEqual from 'lodash/isEqual';
 import debounce from 'lodash/debounce';
 import SaveIcon from '@mui/icons-material/Save';
+import { ChangeType, OperationType, useWorkflow, useWorkflowActions, useWorkflowState } from './context/WorkflowContext';
+import { ComponentDefaultProps } from './WorkflowConstants';
+
+
 
 const generateRandomString = (length: number = 5) => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -43,145 +47,122 @@ const nodeTypes = {
   default: CustomNode,
 };
 
-interface HistoryState {
-  nodes: Node[];
-  edges: Edge[];
-}
 
 interface WorkflowChartProps {
-  onNodeSelect?: (node: Node | null) => void;
-  defaultNodes: Node[];
-  defaultEdges: Edge[];
-  defaultViewport: Viewport;
   onChange?: () => void;
-  hasUnsavedChanges: boolean;
 }
 
-function Flow({ onNodeSelect, defaultNodes, defaultEdges, defaultViewport,onChange,hasUnsavedChanges }: WorkflowChartProps) {
-  const [nodes, setNodes] = useState<Node[]>(defaultNodes);
-  const [edges, setEdges] = useState<Edge[]>(defaultEdges);
+function Flow({onChange }: WorkflowChartProps) {
+  const {
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    saveHistory,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    setSelectedNode,
+    viewport,
+    hasUnsavedChanges,
+    save,
+    isSaving,
+    clearSaveQueue,
+    getSaveQueue,
+    resetSaveState
+  } = useWorkflow();
   const [selectedElements, setSelectedElements] = useState<{ nodes: Node[]; edges: Edge[]; }>({ nodes: [], edges: [] });
   const { project, getNodes, getEdges, getViewport } = useReactFlow();
 
-  const [history, setHistory] = useState<HistoryState[]>([{
-    nodes: cloneDeep(defaultNodes),
-    edges: cloneDeep(defaultEdges)
-  }]);
-  const [currentHistoryIndex, setCurrentHistoryIndex] = useState(0);
 
-  const saveHistory = useCallback((newNodes: Node[], newEdges: Edge[]) => {
-    // 先进行变化检测
-    const lastState = history[currentHistoryIndex];
-    const hasChanged = !isEqual(lastState.nodes, newNodes) ||
-      !isEqual(lastState.edges, newEdges);
-
-    if (!hasChanged) return; // 如果没有变化，直接返回
-    onChange?.();
-    setHistory(prev => {
-      const newHistory = prev.slice(0, currentHistoryIndex + 1).map((state, index) => {
-        if (index === currentHistoryIndex) {
-          return {
-            nodes: cloneDeep(state.nodes),
-            edges: cloneDeep(state.edges)
-          };
-        }
-        return state;
-      });
-      if (newHistory.length >= 50) {
-        newHistory.shift();
-      }
-      // 直接使用当前状态，不需要深拷贝
-      return [...newHistory, {
-        nodes: newNodes,
-        edges: newEdges
-      }];
-    });
-
-    // 确实发生变化时才更新索引
-    setCurrentHistoryIndex(prev =>
-      prev + 1 >= 50 ? 49 : prev + 1
-    );
-  }, [currentHistoryIndex, onChange]);
-
-  // 添加防抖以减少历史记录的保存频率
-  const debouncedSaveHistory = useCallback(
-    debounce((nodes: Node[], edges: Edge[]) => {
-      saveHistory(nodes, edges);
-    }, 300),
-    [saveHistory]
-  );
-
-
-  // 在需要频繁保存历史的地方使用 debouncedSaveHistory
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      console.log('Node changes:', changes);
+
+      // 过滤和处理变更
+      const significantChanges = changes.filter(change => {
+        // dimensions 变更不需要触发 onChange
+        if (change.type === 'dimensions') {
+          return false;
+        }
+        if (change.type === 'select') {
+          return false;
+        }
+        // 对于 position 变更，只在实际位置改变时触发
+        if (change.type === 'position') {
+          const oldNode = nodes.find(n => n.id === change.id);
+          const newNode = applyNodeChanges([change], nodes).find(n => n.id === change.id);
+          return oldNode && newNode && (
+            oldNode.position.x !== newNode.position.x ||
+            oldNode.position.y !== newNode.position.y
+          );
+        }
+
+        return true;
+      }).map(change => {
+        // 根据变更类型构造 ChangeItem
+        const changeItem = {
+          type: ChangeType.NODE,
+          id: change.type === 'add' ? change.item.id : change.id,
+          operation: change.type === 'add' ? OperationType.ADD :
+            change.type === 'remove' ? OperationType.DELETE :
+              OperationType.UPDATE,
+          previousValue: change.type === 'add' ? null :
+            nodes.find(n => n.id === change.id),
+          currentValue: change.type === 'add' ? change.item :
+            change.type === 'remove' ? null :
+              applyNodeChanges([change], nodes).find(n => n.id === change.id)
+        };
+        return changeItem;
+      });
+
+      // 应用所有变更
       const newNodes = applyNodeChanges(changes, nodes);
       setNodes(newNodes);
 
-      const hasNonSelectChange = changes.some(change =>
-        change.type === 'add' ||
-        change.type === 'remove'
-      );
-
-      if (hasNonSelectChange) {
-        debouncedSaveHistory(newNodes, edges);
+      // 保存重要变更到历史记录
+      if (significantChanges.length > 0) {
+        console.log('saving significantChanges',significantChanges);
+        saveHistory(significantChanges);
+        if (onChange) onChange();
       }
     },
-    [nodes, edges, debouncedSaveHistory]
+    [nodes, onChange, setNodes]
   );
-
-  // 清理防抖函数
-  useEffect(() => {
-    return () => {
-      debouncedSaveHistory.cancel();
-    };
-  }, [debouncedSaveHistory]);
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
+      const significantChanges = changes.filter(change => change.type !== 'select').map(change => ({
+        type: ChangeType.EDGE,
+        id: change.id,
+        operation: change.type === 'add' ? OperationType.ADD :
+          change.type === 'remove' ? OperationType.DELETE :
+            OperationType.UPDATE,
+        previousValue: edges.find(e => e.id === change.id),
+        currentValue: change.type === 'remove' ? null :
+          applyEdgeChanges([change], edges).find(e => e.id === change.id)
+      }));
+
       const newEdges = applyEdgeChanges(changes, edges);
       setEdges(newEdges);
 
-      const hasNonSelectChange = changes.some(change =>
-        change.type === 'add' ||
-        change.type === 'remove'
-      );
-
-      if (hasNonSelectChange) {
-        debouncedSaveHistory(nodes, newEdges);
+      if (significantChanges.length > 0) {
+        saveHistory(significantChanges);
+        if (onChange) onChange();
       }
     },
-    [nodes, edges, debouncedSaveHistory, onChange]
+    [edges, onChange, setEdges, saveHistory]
   );
 
   const onConnect = useCallback(
     (params: Connection) => {
       const newEdges = addEdge(params, edges);
       setEdges(newEdges);
-      debouncedSaveHistory(nodes, newEdges);
     },
-    [nodes, edges, debouncedSaveHistory]
+    [nodes, edges]
   );
 
-  const handleUndo = useCallback(() => {
-    if (currentHistoryIndex > 0) {
-      const newIndex = currentHistoryIndex - 1;
-      const historyState = history[newIndex];
-      setNodes(cloneDeep(historyState.nodes));
-      setEdges(cloneDeep(historyState.edges));
-      setCurrentHistoryIndex(newIndex);
-    }
-  }, [currentHistoryIndex, history]);
-
-  const handleRedo = useCallback(() => {
-    if (currentHistoryIndex < history.length - 1) {
-      const newIndex = currentHistoryIndex + 1;
-      const historyState = history[newIndex];
-      setNodes(cloneDeep(historyState.nodes));
-      setEdges(cloneDeep(historyState.edges));
-      setCurrentHistoryIndex(newIndex);
-    }
-  }, [currentHistoryIndex, history]);
 
   const onSelectionChange = useCallback(
     (params: { nodes: Node[]; edges: Edge[]; }) => {
@@ -190,23 +171,43 @@ function Flow({ onNodeSelect, defaultNodes, defaultEdges, defaultViewport,onChan
     []
   );
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedElements.nodes.length === 0 && selectedElements.edges.length === 0) {
+      return;
+    }
+
+    // 使用 onNodesChange 删除节点
     if (selectedElements.nodes.length > 0) {
+      const nodesToRemove = selectedElements.nodes.map(node => ({
+        type: 'remove' as const,
+        id: node.id,
+      }));
+      onNodesChange(nodesToRemove);
+
+      // 找出需要删除的边（连接到被删除节点的边）
       const selectedNodeIds = selectedElements.nodes.map(node => node.id);
-      setNodes((nds) => nds.filter((node) => !selectedNodeIds.includes(node.id)));
+      const edgesToRemove = edges.filter(
+        edge => selectedNodeIds.includes(edge.source) || selectedNodeIds.includes(edge.target)
+      ).map(edge => ({
+        type: 'remove' as const,
+        id: edge.id,
+      }));
+
+      if (edgesToRemove.length > 0) {
+        onEdgesChange(edgesToRemove);
+      }
     }
 
+    // 使用 onEdgesChange 删除独立选中的边
     if (selectedElements.edges.length > 0) {
-      const selectedEdgeIds = selectedElements.edges.map(edge => edge.id);
-      setEdges((eds) => eds.filter((edge) => !selectedEdgeIds.includes(edge.id)));
+      const edgesToRemove = selectedElements.edges.map(edge => ({
+        type: 'remove' as const,
+        id: edge.id,
+      }));
+      onEdgesChange(edgesToRemove);
     }
+  }, [selectedElements, onNodesChange, onEdgesChange, edges]);
 
-    if (selectedElements.nodes.length > 0 || selectedElements.edges.length > 0) {
-      const newNodes = nodes.filter(node => !selectedElements.nodes.includes(node));
-      const newEdges = edges.filter(edge => !selectedElements.edges.includes(edge));
-      debouncedSaveHistory(newNodes, newEdges);
-    }
-  };
 
   const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -240,33 +241,39 @@ function Flow({ onNodeSelect, defaultNodes, defaultEdges, defaultViewport,onChan
           name: name,
           label: label,
           group: group,
-          props: {}
+          props: {...ComponentDefaultProps[name]}
         },
         selected: true,
       };
 
-      const newNodes = nodes.map(node => ({ ...node, selected: false }));
-      setNodes([...newNodes, newNode]);
-      debouncedSaveHistory([...newNodes, newNode], edges);
+      // const newNodes = nodes.map(node => ({ ...node, selected: false }));
+      // setNodes([...newNodes, newNode]);
+      onNodesChange([
+        // 先取消所有节点的选中状态
+        ...nodes.map(node => ({
+          type: 'select' as const,
+          id: node.id,
+          selected: false
+        })),
+        // 添加新节点
+        {
+          type: 'add' as const,
+          item: newNode
+        }
+      ]);
 
-      if (onNodeSelect) {
-        onNodeSelect(newNode);
-      }
+      setSelectedNode(newNode);
     },
-    [project, nodes, edges, debouncedSaveHistory, onNodeSelect, onChange]
+    [project, nodes, edges, onChange, setSelectedNode]
   );
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    if (onNodeSelect) {
-      onNodeSelect(node);
-    }
-  }, [onNodeSelect]);
+    setSelectedNode(node);
+  }, [setSelectedNode]);
 
   const onPaneClick = useCallback(() => {
-    if (onNodeSelect) {
-      onNodeSelect(null);
-    }
-  }, [onNodeSelect]);
+    setSelectedNode(null);
+  }, [setSelectedNode]);
 
   const handleExport = () => {
     const flowData = {
@@ -293,14 +300,13 @@ function Flow({ onNodeSelect, defaultNodes, defaultEdges, defaultViewport,onChan
     window.URL.revokeObjectURL(url);
   };
 
-  const handleSave = () => {
-    const flowData = {
-      nodes: getNodes(),
-      edges: getEdges(),
-      viewport: getViewport()
-    };
-    // 这里你可以添加保存逻辑，比如调用API等
-    console.log('Saving workflow:', flowData);
+  const handleSave = async () => {
+    // const flowData = {
+    //   nodes: getNodes(),
+    //   edges: getEdges(),
+    //   viewport: getViewport()
+    // };
+    await save();
   };
 
 
@@ -310,16 +316,16 @@ function Flow({ onNodeSelect, defaultNodes, defaultEdges, defaultViewport,onChan
         <Box sx={{ display: 'flex', gap: 1 }}>
           <IconButton
             size="small"
-            onClick={handleUndo}
-            disabled={currentHistoryIndex <= 0}
+            onClick={undo}
+            disabled={!canUndo}
             sx={{ color: 'text.secondary' }}
           >
             <UndoIcon fontSize="small" />
           </IconButton>
           <IconButton
             size="small"
-            onClick={handleRedo}
-            disabled={currentHistoryIndex >= history.length - 1}
+            onClick={redo}
+            disabled={!canRedo}
             sx={{ color: 'text.secondary' }}
           >
             <RedoIcon fontSize="small" />
@@ -345,8 +351,9 @@ function Flow({ onNodeSelect, defaultNodes, defaultEdges, defaultViewport,onChan
           </IconButton>
           <IconButton
             size="small"
+            disabled={isSaving}
             onClick={handleSave}
-            sx={{ 
+            sx={{
               color: hasUnsavedChanges ? 'primary.main' : 'text.disabled',
               transition: 'color 0.2s'
             }}
@@ -359,7 +366,7 @@ function Flow({ onNodeSelect, defaultNodes, defaultEdges, defaultViewport,onChan
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          defaultViewport={defaultViewport}
+          defaultViewport={viewport}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
@@ -391,10 +398,10 @@ function Flow({ onNodeSelect, defaultNodes, defaultEdges, defaultViewport,onChan
   );
 }
 
-export default function WorkflowChart({ onNodeSelect, defaultNodes, defaultEdges, defaultViewport,onChange,hasUnsavedChanges }: WorkflowChartProps) {
+export default function WorkflowChart({ onChange }: WorkflowChartProps) {
   return (
     <ReactFlowProvider>
-      <Flow onNodeSelect={onNodeSelect} defaultNodes={defaultNodes} defaultEdges={defaultEdges} defaultViewport={defaultViewport} onChange={onChange} hasUnsavedChanges={hasUnsavedChanges} />
+      <Flow onChange={onChange} />
     </ReactFlowProvider>
   );
 } 

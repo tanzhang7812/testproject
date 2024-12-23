@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ComponentItem, ComponentNav, NavDivider, Search, SearchIconWrapper, StyledInputBase, StyledAccordion, ToggleButton } from './styled';
 import { AccordionDetails, Box, List, ListItemText, Typography } from '@mui/material';
-import { etlComponents, iconColors } from './constants';
+import { etlComponents, iconColors } from './WorkflowConstants';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import SearchIcon from '@mui/icons-material/Search';

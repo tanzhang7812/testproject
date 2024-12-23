@@ -16,7 +16,13 @@ import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import CallMergeIcon from '@mui/icons-material/CallMerge';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
-import { NodeData, NodeStatus } from './constants';
+import { NodeData, NodeStatus } from './WorkflowConstants';
+import { useFlowStore } from './flowStore';
+interface RuntimeNodeState {
+  [nodeId: string]: {
+    status?: NodeStatus;
+  }
+}
 
 const iconMap = {
   'CSVReader': StorageIcon,
@@ -183,6 +189,9 @@ const CustomNode = ({ data, selected, id }: NodeProps) => {
   const Icon = iconMap[data.name as keyof typeof iconMap] || StorageIcon;
   const { setNodes } = useReactFlow();
 
+// 使用 useFlowStore 获取运行时状态
+  const nodeStatus = useFlowStore((state) => state.runtimeNodeStates[id]?.status);
+
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
@@ -257,9 +266,9 @@ const CustomNode = ({ data, selected, id }: NodeProps) => {
       <IconWrapper group={data.group}>
         <Icon sx={{ fontSize: 'inherit' }} />
       </IconWrapper>
-      {data.status && (
-        <StatusIndicator status={data.status}>
-          {data.status === 'SUCCESS' ? <CheckCircleIcon /> : <ErrorIcon />}
+      {nodeStatus && (
+        <StatusIndicator status={nodeStatus}>
+          {nodeStatus === 'SUCCESS' ? <CheckCircleIcon /> : <ErrorIcon />}
         </StatusIndicator>
       )}
       {isEditing ? (

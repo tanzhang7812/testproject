@@ -164,7 +164,7 @@ const WorkflowProps = ({ config, onChange }: WorkflowPropsProps) => {
   };
 
   return (
-    <Box>
+    <Box sx={{height:'100%',p:2}}>
       <FormProvider defaultValue={{
           id: config.id,
           name: config.name,

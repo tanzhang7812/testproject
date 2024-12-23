@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import PowerUpload from '../../../../component/PowerUpload';
 import { UploadFile } from '../../../../component/PowerUpload/types';
-import { CommonComponentPropsProps } from '../../constants';
+import { CommonComponentPropsProps } from '../../WorkflowConstants';
 
 const FileUploaderProps: React.FC<CommonComponentPropsProps> = ({ form,id,props,description,onChange }) => {
     const [fileList, setFileList] = useState<UploadFile[]>([])
@@ -10,7 +10,7 @@ const FileUploaderProps: React.FC<CommonComponentPropsProps> = ({ form,id,props,
         setFileList(prev => prev.filter(f => f.id !== file.id));
     };
   return (
-    <Box>
+    <Box sx={{height:'100%',p:2}}>
         <Typography variant="body2" color="text.secondary">{description}</Typography>
         <PowerUpload
           uploadUrl="/api/upload"

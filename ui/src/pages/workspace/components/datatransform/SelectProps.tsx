@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import { CommonComponentPropsProps } from '../../constants';
+import { CommonComponentPropsProps } from '../../WorkflowConstants';
 import PowerEditGrid , { ValidationError, GridChangeInfo }from '../../../../component/PowerEditGrid';
 
 const SelectProps: React.FC<CommonComponentPropsProps> = ({ form,id,props,description,onChange }) => {

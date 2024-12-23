@@ -7,13 +7,13 @@ import { IconButton } from '@mui/material';
 import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
 import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import { Node } from 'reactflow';
-import { NodeData, etlComponents } from './constants';
+import { NodeData, etlComponents } from './WorkflowConstants';
 import WorkflowProps from './components/WorkflowProps';
 import { alpha } from '@mui/material/styles';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PreviewIcon from '@mui/icons-material/Preview';
+import { useWorkflowState } from './context/WorkflowContext';
 interface ComponentSettingProps {
-  selectedNode: Node<NodeData> | null;
   workflowInfo: {
     id: string;
     name: string;
@@ -24,9 +24,9 @@ interface ComponentSettingProps {
   onNodeChange?: (nodeId: string, props: any) => void;
 }
 
-const ComponentSetting = ({ selectedNode, workflowInfo, onWorkflowInfoChange,onNodeChange }: ComponentSettingProps) => {
+const ComponentSetting = ({  workflowInfo, onWorkflowInfoChange,onNodeChange }: ComponentSettingProps) => {
   const [settingExpanded, setSettingExpanded] = useState(false);
-
+  const { selectedNode } = useWorkflowState();
   // 根据选中的节点找到对应的组件
   const renderComponent = () => {
     if (!selectedNode) {

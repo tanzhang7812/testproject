@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Typography } from '@mui/material';
-import { CommonComponentPropsProps } from '../../constants';
+import { CommonComponentPropsProps } from '../../WorkflowConstants';
 import FilterAssemble from '../../../../component/FilterAssemble';
 
 const FilterProps: React.FC<CommonComponentPropsProps> = ({ form,id,props,description,onChange }) => {
