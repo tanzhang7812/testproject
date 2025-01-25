@@ -36,6 +36,7 @@ export interface ColumnConfig extends Omit<GridColDef, 'type'> {
     options?: { label: string; value: any }[];
   };
   renderCell?: (params: any) => React.ReactNode;
+  renderHeader?: (params: any) => React.ReactNode;
 }
 
 interface CustomAction {
@@ -420,6 +421,22 @@ const PowerDataGrid: React.FC<PowerDataGridProps> = ({
     const processedCols = columns.map(col => ({
       ...col,
       editable: false,
+      // Add custom header rendering
+    renderHeader: (params: any) => {
+      if (col.renderHeader) {
+        return col.renderHeader(params);
+      }
+      // Default header rendering
+      return (
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          fontSize: '0.875rem',
+        }}>
+          {params.colDef.headerName || params.colDef.field}
+        </Box>
+      );
+    },
       renderCell: (params: any) => {
         if (params.row.isGroup) {
           if (col.renderCell && params.value !== undefined) {

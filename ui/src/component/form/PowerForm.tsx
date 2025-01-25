@@ -16,6 +16,7 @@ import Button from "@mui/material/Button";
 import {useFormContext} from "./PowerFormContext.tsx"
 import RowRadio from "./RowRadio.tsx";
 import Select from "./Select.tsx";
+import CodeEditor, { Field as CodeEditorField, FunctionDef } from '../CodeEditor';
 import {dynamicFormRef} from "./formConfigV2.ts";
 import {array} from "yup";
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
@@ -59,7 +60,7 @@ export interface FormField {
     validate?: (value: any, formValues: any) => string | undefined;
 }
 
-interface FormGroup {
+export interface FormGroup {
     inline: any;
     name: string;
     header?: string;
@@ -67,7 +68,7 @@ interface FormGroup {
     orient?: string;
     desc?: string;
     type?: string;
-    fields: FormField[];
+    //fields: FormField[];
     id?: string;
     index?: number;
     labelWidth?: number;
@@ -113,7 +114,7 @@ interface ControllerFieldProps {
     control: any;
     error?: any;
     watchFieldsResult: WatchFieldsResult;
-    type?: 'radio' | 'select' | 'text' | 'date' | 'time' | 'datetime' | 'textarea' | 'checkbox' | 'richSelect';
+    type?: 'radio' | 'select' | 'text' | 'date' | 'time' | 'datetime' | 'textarea' | 'checkbox' | 'richSelect' | 'custom';
     options?: FieldOption[] | DisplayControl;
     value?: any;
     rows?: number;
@@ -121,6 +122,7 @@ interface ControllerFieldProps {
     info?: string;
     validate?: (value: any, formValues: any) => string | undefined;
     getValues?: () => Record<string, any>;
+    renderField?: (props: any) => React.ReactNode;
 }
 
 function isWatchedControl(obj: any): obj is DisplayControl {
@@ -388,7 +390,7 @@ function getActiveFields(
 }
 
 export default ({ group={},fields=[],labelWidth=150,inline=true, orient = 'v',mode='normal',header,name,desc,dynamicFormRef}: PowerFormProps) => {
-    const { control,watch,defaultValue, formState: { errors },getValues,onValueChange,formError } = useFormContext()
+    const { control,watch,defaultValue, formState: { errors },getValues,formError } = useFormContext()
 
     const [groupedFields,watchedFields]=useMemo(()=>{
         const watchcol=dynamicFormRef?Object.keys(dynamicFormRef):[]
@@ -398,13 +400,8 @@ export default ({ group={},fields=[],labelWidth=150,inline=true, orient = 'v',mo
         return [fg,watchcol]
     },[fields,group,dynamicFormRef])
 
-    const onValueChangeDebounce=useCallback(debounce(onValueChange?onValueChange:()=>{},100),[])
-    if(onValueChange){
-        const watchAllFields = watch();
-        if(!isEqual(watchAllFields,defaultValue)){
-            onValueChangeDebounce(watchAllFields)
-        }
-    }
+    // const watchAllFields = watch();
+    // console.log('watchAllFields',watchAllFields)
     
     const watchFieldsValue = watch(watchedFields)
     const watchFieldsResult =useMemo(()=>{
@@ -501,6 +498,7 @@ const FormGroup: React.FC<FormGroupProps> = ({
             alignItems="flex-start"
             marginTop={'10px'}
             px={root?2:0}
+            gap={1}
         >
             {children}
         </Stack>):(<Grid container>
@@ -621,23 +619,23 @@ const SimpleHeader = ({name}) => {
 }
 
 const DividerHeader = ({name}) => {
-    return <>
-        {name}
-        <Divider/>
-    </>
+    return <Box sx={{height:'40px',width:'100%',display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
+        <Typography sx={{position:'absolute',backgroundColor:'#fff',left:'40px',padding:'0 10px'}}>{name}</Typography>
+        <Divider sx={{flexGrow: 1}}/>
+    </Box>
 }
 
 const ControllerField = forwardRef<HTMLDivElement, ControllerFieldProps>((props, ref) => {
     const {labelWidth = 150,label,name,info, inline = true,mode, required, maxWidth,control,error,watchFieldsResult,validate,getValues,...others}=props
     const errorObj=getError(label,error)
+    const { onFormValueChange } = useFormContext()
     return <Box sx={{
         display: inline ? 'flex' : 'block',
         alignItems: 'flex-start',
         width: '100%',
         maxWidth: maxWidth,
-        p:1
     }}>
-        <Box sx={{width:inline ? labelWidth : '100%',flexShrink:0,height:"20px",lineHeight: "20px",fontSize:'0.9rem'}}>
+        <Box sx={{width:inline ? labelWidth : '100%',flexShrink:0,height:inline?"30px":'20px',lineHeight: inline?"30px":'20px',fontSize:'0.9rem',marginBottom:inline?"0":"2px"}}>
             {label} {required ? <span style={{color: 'red'}}>*</span> : undefined}
             {info && <Tooltip title={info} arrow>
                 <HelpOutlineOutlinedIcon style={{color: 'grey', fontSize: '15px', marginLeft: '5px'}}/>
@@ -663,6 +661,9 @@ const ControllerField = forwardRef<HTMLDivElement, ControllerFieldProps>((props,
                     return <Field ref={ref} size='small' 
                         mode={mode} fullWidth {...field} {...errorObj} {...others}
                         value={field.value || ""} 
+                        onValueChange={()=>{
+                            onFormValueChange(field.name)
+                        }}
                         ></Field>
                 }}
             />
@@ -672,13 +673,24 @@ const ControllerField = forwardRef<HTMLDivElement, ControllerFieldProps>((props,
 })
 
 const Field = forwardRef<HTMLDivElement, any>((props, ref) => {
-    const {type,mode, ...others} = props;
+    const {type,mode,onValueChange, renderField, ...others} = props;
     
     switch (type) {
         case 'radio':
-            return <RowRadio ref={ref} {...others} disabled={mode==='readonly'}/>;
+            return <RowRadio ref={ref} {...others} disabled={mode==='readonly'} onChange={(e)=>{
+                others.onChange(e)
+                onValueChange()
+            }}/>;
+        case 'number':
+            return <TextField disabled={mode==='readonly'} ref={ref} size='small' type='number' fullWidth {...others} onChange={(e)=>{
+                others.onChange(e)
+                onValueChange()
+            }}/>;
         case 'select':
-            return <Select ref={ref} {...others} disabled={mode==='readonly'}/>;
+            return <Select ref={ref} {...others} disabled={mode==='readonly'} onChange={(e)=>{
+                others.onChange(e)
+                onValueChange()
+            }}/>;
         case 'datetime':
             return (
                     <TextField
@@ -689,6 +701,10 @@ const Field = forwardRef<HTMLDivElement, any>((props, ref) => {
                         inputProps={{
                             step: props.step || 1
                         }}
+                        onChange={(e)=>{
+                            others.onChange(e)
+                            onValueChange()
+                        }}
                     />
             );
         case 'date':
@@ -698,6 +714,10 @@ const Field = forwardRef<HTMLDivElement, any>((props, ref) => {
                         type="date"
                         disabled={mode==='readonly'}
                         {...others}
+                        onChange={(e)=>{
+                            others.onChange(e)
+                            onValueChange()
+                        }}
                     />
             );
         case 'time':
@@ -709,6 +729,10 @@ const Field = forwardRef<HTMLDivElement, any>((props, ref) => {
                         {...others}
                         inputProps={{
                             step: props.step || 1
+                        }}
+                        onChange={(e)=>{
+                            others.onChange(e)
+                            onValueChange()
                         }}
                     />
             );
@@ -722,6 +746,10 @@ const Field = forwardRef<HTMLDivElement, any>((props, ref) => {
                     size='small'
                     fullWidth
                     {...others}
+                    onChange={(e)=>{
+                        others.onChange(e)
+                        onValueChange()
+                    }}
                 />
             );
         case 'checkbox':
@@ -732,7 +760,10 @@ const Field = forwardRef<HTMLDivElement, any>((props, ref) => {
                             ref={ref}
                             disabled={mode==='readonly'}
                             checked={others.value}
-                            onChange={(e) => others.onChange(e.target.checked)}
+                            onChange={(e) => {
+                                others.onChange(e.target.checked)
+                                onValueChange()
+                            }}
                             size='small'
                         />
                     }
@@ -740,9 +771,43 @@ const Field = forwardRef<HTMLDivElement, any>((props, ref) => {
                 />
             );
         case 'richSelect':
-            return <RichSelect disabled={mode==='readonly'} ref={ref} {...others} />;
+            return <RichSelect disabled={mode==='readonly'} ref={ref} {...others} onChange={(e)=>{
+                others.onChange(e)
+                onValueChange()
+            }}/>;
+        case 'codeEditor':
+            return (
+                <CodeEditor
+                    value={others.value}
+                    onChange={(value) => {
+                        others.onChange(value);
+                        onValueChange();
+                    }}
+                    fields={others.fields || []}
+                    functions={others.functions || []}
+                    error={others.error}
+                    helperText={others.helperText}
+                    readOnly={mode === 'readonly'}
+                />
+            );
+        case 'custom':
+            if (!renderField) {
+                console.warn('renderField is required for custom field type');
+                return null;
+            }
+            return renderField({
+                ...others,
+                disabled: mode === 'readonly',
+                onChange: (value: any) => {
+                    others.onChange(value);
+                    onValueChange();
+                }
+            });
         default:
-            return <TextField disabled={mode==='readonly'} ref={ref} size='small' fullWidth {...others} />;
+            return <TextField disabled={mode==='readonly'} ref={ref} size='small' fullWidth {...others} onChange={(e)=>{
+                others.onChange(e)
+                onValueChange()
+            }}/>;
     }
 });
 

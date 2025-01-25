@@ -4,11 +4,13 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import Select from '../form/Select';
 import TextField from '@mui/material/TextField';
 import { styled } from '@mui/material/styles';
+import CodeEditor, { Field as CodeEditorField, FunctionDef } from '../CodeEditor';
+import { validateExpression } from '../CodeEditor/utils';
 
 // Types
 export interface Field {
   value: string;
-  dataType: 'string' | 'number' | 'date' | 'time' | 'datetime';
+  dataType: 'string' | 'number' | 'date' | 'timestamp';
   header: string;
 }
 
@@ -32,21 +34,23 @@ export interface ConditionGroup {
 }
 
 interface FilterAssembleProps {
-  fields: Field[];
+  lfields: Field[];
+  rfields: Field[];
   operations: Operation[];
   conditions: ConditionGroup[];
   onChange: (conditions: ConditionGroup[]) => void;
   triggerInitValidate?: boolean;
+  functions?: FunctionDef[];
+  drawerPosition?: 'left' | 'right';
 }
 
 // Styled components
 const FilterRow = styled(Box)(({ theme }) => ({
   display: 'grid',
-  gridTemplateColumns: '1fr 1fr 1fr 2fr 140px',
+  gridTemplateColumns: '1fr 1fr 1fr 2fr 90px',
   gap: theme.spacing(1),
   marginBottom: theme.spacing(1),
   alignItems: 'center',
-  paddingLeft: theme.spacing(2),
   '& .MuiTextField-root, & .MuiAutocomplete-root': {
     width: '100%'
   }
@@ -86,17 +90,21 @@ const OperationButtons = styled(Box)(({ theme }) => ({
   justifyContent: 'flex-end',
   width: '100%',
   '& .MuiButton-root': {
-    minWidth: '40px',
-    padding: '2px 8px',
+    minWidth: '30px',
+    padding: '2px 2px',
+    fontSize: '0.7rem',
   }
 }));
 
 const FilterAssemble: React.FC<FilterAssembleProps> = ({
-  fields,
+  lfields,
+  rfields,
   operations,
   conditions,
   onChange,
+  drawerPosition='left',
   triggerInitValidate = false,
+  functions = [],
 }) => {
   const [localConditions, setLocalConditions] = useState<ConditionGroup[]>(conditions);
   const [validationErrors, setValidationErrors] = useState<boolean>(false);
@@ -109,12 +117,12 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
 
     for (const group of conditionsToValidate) {
       if (!group.group) continue;
-      
+
       for (const condition of group.group) {
         if (!condition.field || !condition.operate) {
           return false;
         }
-        
+
         // Check if value is required based on operation type
         const operation = operations.find(op => op.value === condition.operate);
         if (operation && operation.type !== 'none' && (!condition.value || condition.value.length === 0)) {
@@ -151,12 +159,33 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
       group[rowIndex] = {
         ...group[rowIndex],
         field: value,
-        funcfield: value,
+        funcfield: value, // Keep this for backward compatibility
         operate: '', // Reset operation when field changes
         value: [], // Reset value when field changes
       };
     }
     setLocalConditions(newConditions);
+    onChange(newConditions);
+
+    const isValid = validateConditions(newConditions);
+    setValidationErrors(!isValid);
+    onChange(newConditions);
+  };
+
+  const handleFuncFieldChange = (rowIndex: number, groupIndex: number, value: string) => {
+    const newConditions = [...localConditions];
+    const group = newConditions[groupIndex].group;
+    if (group) {
+      group[rowIndex] = {
+        ...group[rowIndex],
+        funcfield: value,
+      };
+    }
+    setLocalConditions(newConditions);
+    onChange(newConditions);
+
+    const isValid = validateConditions(newConditions);
+    setValidationErrors(!isValid);
     onChange(newConditions);
   };
 
@@ -171,6 +200,10 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
       };
     }
     setLocalConditions(newConditions);
+    onChange(newConditions);
+
+    const isValid = validateConditions(newConditions);
+    setValidationErrors(!isValid);
     onChange(newConditions);
   };
 
@@ -187,30 +220,34 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
     }
     setLocalConditions(newConditions);
     onChange(newConditions);
+
+    const isValid = validateConditions(newConditions);
+    setValidationErrors(!isValid);
+    onChange(newConditions);
   };
 
   const handleDelete = (rowIndex: number, groupIndex: number) => {
     const newConditions = [...localConditions];
     const currentGroup = newConditions[groupIndex];
-    
+
     if (currentGroup.group) {
       currentGroup.group.splice(rowIndex, 1);
-      
+
       // If group has only one condition left, convert to empty type
       if (currentGroup.group.length === 1) {
         currentGroup.type = '';
-        
+
         // Check if we can merge with adjacent groups
         const prevGroup = groupIndex > 1 ? newConditions[groupIndex - 2] : null;
         const nextGroup = groupIndex < newConditions.length - 2 ? newConditions[groupIndex + 2] : null;
         const prevSeparator = groupIndex > 0 ? newConditions[groupIndex - 1] : null;
         const nextSeparator = groupIndex < newConditions.length - 1 ? newConditions[groupIndex + 1] : null;
-        
+
         // Check if we can merge with both prev and next groups
-        if (prevGroup && nextGroup && 
-            prevSeparator?.type === 'and' && nextSeparator?.type === 'and' &&
-            (prevGroup.type === '' || prevGroup.type === 'andgroup') &&
-            (nextGroup.type === '' || nextGroup.type === 'andgroup')) {
+        if (prevGroup && nextGroup &&
+          prevSeparator?.type === 'and' && nextSeparator?.type === 'and' &&
+          (prevGroup.type === '' || prevGroup.type === 'andgroup') &&
+          (nextGroup.type === '' || nextGroup.type === 'andgroup')) {
           // Merge all three groups
           const mergedGroup: ConditionGroup = {
             type: prevGroup.group!.length + currentGroup.group.length + nextGroup.group!.length > 1 ? 'andgroup' : '',
@@ -220,7 +257,7 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
         }
         // Check if we can merge with prev group
         else if (prevGroup && prevSeparator?.type === 'and' &&
-                 (prevGroup.type === '' || prevGroup.type === 'andgroup')) {
+          (prevGroup.type === '' || prevGroup.type === 'andgroup')) {
           // Merge with prev group
           const mergedGroup: ConditionGroup = {
             type: prevGroup.group!.length + currentGroup.group.length > 1 ? 'andgroup' : '',
@@ -230,7 +267,7 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
         }
         // Check if we can merge with next group
         else if (nextGroup && nextSeparator?.type === 'and' &&
-                 (nextGroup.type === '' || nextGroup.type === 'andgroup')) {
+          (nextGroup.type === '' || nextGroup.type === 'andgroup')) {
           // Merge with next group
           const mergedGroup: ConditionGroup = {
             type: currentGroup.group.length + nextGroup.group!.length > 1 ? 'andgroup' : '',
@@ -239,7 +276,7 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
           newConditions.splice(groupIndex, 3, mergedGroup);
         }
       }
-      
+
       // If group is empty, remove it and its separator
       if (currentGroup.group.length === 0) {
         if (groupIndex > 0 && (newConditions[groupIndex - 1].type === 'and' || newConditions[groupIndex - 1].type === 'or')) {
@@ -249,7 +286,7 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
         }
       }
     }
-    
+
     setLocalConditions(newConditions);
     onChange(newConditions);
   };
@@ -257,7 +294,7 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
   const handleAddOr = (rowIndex: number, groupIndex: number) => {
     const newConditions = [...localConditions];
     const currentGroup = newConditions[groupIndex];
-    
+
     if (currentGroup.type === '') {
       // Add new condition to current group and convert to orgroup
       currentGroup.type = 'orgroup';
@@ -269,10 +306,10 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
       const conditions = currentGroup.group!;
       const beforeConditions = conditions.slice(0, rowIndex);
       const afterConditions = conditions.slice(rowIndex + 1);
-      
+
       // Create new groups
       const updates: ConditionGroup[] = [];
-      
+
       // Add before conditions as empty type group if exists
       if (beforeConditions.length === 1) {
         updates.push({
@@ -285,12 +322,12 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
           group: beforeConditions
         });
       }
-      
+
       // Add AND separator if there were before conditions
       if (beforeConditions.length > 0) {
         updates.push({ type: 'and' });
       }
-      
+
       // Add new orgroup
       updates.push({
         type: 'orgroup',
@@ -299,12 +336,12 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
           { field: '', funcfield: '', operate: '', value: [] }
         ]
       });
-      
+
       // Add AND separator if there are after conditions
       if (afterConditions.length > 0) {
         updates.push({ type: 'and' });
       }
-      
+
       // Add after conditions as empty type group if exists
       if (afterConditions.length === 1) {
         updates.push({
@@ -317,11 +354,11 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
           group: afterConditions
         });
       }
-      
+
       // Replace current group with new groups
       newConditions.splice(groupIndex, 1, ...updates);
     }
-    
+
     setLocalConditions(newConditions);
     onChange(newConditions);
   };
@@ -331,7 +368,7 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
     const currentGroup = newConditions[groupIndex];
     const nextGroup = newConditions[groupIndex + 1];
     const nextNextGroup = newConditions[groupIndex + 2];
-    
+
     if (currentGroup.type === '') {
       // Add new condition to current group and convert to andgroup
       currentGroup.type = 'andgroup';
@@ -369,7 +406,7 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
         newConditions.splice(groupIndex + 2, 0, newEmptyGroup);
       }
     }
-    
+
     setLocalConditions(newConditions);
     onChange(newConditions);
   };
@@ -381,16 +418,16 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
       // Add real OR separator and new empty group
       newConditions.push(
         { type: 'or' },
-        { 
-          type: '', 
-          group: [{ field: '', funcfield: '', operate: '', value: [] }] 
+        {
+          type: '',
+          group: [{ field: '', funcfield: '', operate: '', value: [] }]
         }
       );
     } else {
       // First criteria
-      newConditions.push({ 
-        type: '', 
-        group: [{ field: '', funcfield: '', operate: '', value: [] }] 
+      newConditions.push({
+        type: '',
+        group: [{ field: '', funcfield: '', operate: '', value: [] }]
       });
     }
     setLocalConditions(newConditions);
@@ -398,7 +435,19 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
   };
 
   const renderValueInput = (operation: Operation | undefined, condition: Condition, rowIndex: number, groupIndex: number) => {
-    const selectedField = fields.find(f => f.value === condition.field);
+    const selectedField = lfields.find(f => f.value === condition.field);
+    const getInputType = (dataType?: string) => {
+      if (['int', 'decimal', 'byte', 'float', 'double', 'number'].includes(dataType || '')) {
+        return 'number';
+      }
+      if (dataType === 'date') {
+        return 'date';
+      }
+      if (dataType === 'timestamp') {
+        return 'datetime-local';
+      }
+      return 'text';
+    };
 
     if (!operation || !operation.type) {
       return (
@@ -406,12 +455,9 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
           size="small"
           disabled
           placeholder="Value"
-          type={selectedField?.dataType === 'number' ? 'number' : 
-                selectedField?.dataType === 'date' ? 'date' : 
-                selectedField?.dataType === 'time' ? 'time' :
-                selectedField?.dataType === 'datetime' ? 'datetime-local' : 'text'}
+          type={getInputType(selectedField?.dataType)}
           inputProps={{
-            step: (selectedField?.dataType === 'time' || selectedField?.dataType === 'datetime') ? 1 : undefined // Allow seconds in time and datetime input
+            step: selectedField?.dataType === 'timestamp' ? 1 : undefined
           }}
         />
       );
@@ -422,14 +468,11 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
         return (
           <TextField
             size="small"
-            type={selectedField?.dataType === 'number' ? 'number' : 
-                  selectedField?.dataType === 'date' ? 'date' : 
-                  selectedField?.dataType === 'time' ? 'time' :
-                  selectedField?.dataType === 'datetime' ? 'datetime-local' : 'text'}
+            type={getInputType(selectedField?.dataType)}
             value={condition.value[0] || ''}
             onChange={(e) => handleValueChange(rowIndex, groupIndex, 0, e.target.value)}
             inputProps={{
-              step: (selectedField?.dataType === 'time' || selectedField?.dataType === 'datetime') ? 1 : undefined // Allow seconds in time and datetime input
+              step: selectedField?.dataType === 'timestamp' ? 1 : undefined
             }}
           />
         );
@@ -446,27 +489,42 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
         return (
           <TextField
             size="small"
-            type={selectedField?.dataType === 'time' ? 'time' :
-                  selectedField?.dataType === 'datetime' ? 'datetime-local' : 'date'}
+            type={getInputType(selectedField?.dataType)}
             value={condition.value[0] || ''}
             onChange={(e) => handleValueChange(rowIndex, groupIndex, 0, e.target.value)}
             inputProps={{
-              step: (selectedField?.dataType === 'time' || selectedField?.dataType === 'datetime') ? 1 : undefined // Allow seconds in time and datetime input
+              step: selectedField?.dataType === 'timestamp' ? 1 : undefined
             }}
           />
         );
       case 'field':
+        const selectedRField = rfields.find(f => f.value === condition.value[0]);
+        const codeEditorFields = selectedRField ? [{
+          name: selectedRField.value,
+          dataType: selectedRField.dataType
+        }] : [];
+        const { isValid, errors } = validateExpression(condition.value[1]?.toString() || '', codeEditorFields, functions);
+
         return (
           <Box sx={{ display: 'flex', gap: 1 }}>
             <Select
-              options={fields.map(f => ({ label: f.header, value: f.value }))}
+              options={rfields.map(f => ({ label: f.header, value: f.value }))}
               value={condition.value[0] || ''}
-              onChange={(value) => handleValueChange(rowIndex, groupIndex, 0, value || '')}
+              onChange={(value) => {
+                // 同时更新两个值
+                handleValueChange(rowIndex, groupIndex, 0, value || '');
+                handleValueChange(rowIndex, groupIndex, 1, value || '');
+              }}
             />
-            <TextField
-              size="small"
-              value={condition.value[0] || ''}
-              disabled
+            <CodeEditor
+              value={condition.value[1]?.toString() || ''}
+              onChange={(value) => handleValueChange(rowIndex, groupIndex, 1, value)}
+              fields={codeEditorFields}
+              functions={functions}
+              error={!isValid}
+              drawerPosition={drawerPosition}
+              helperText={!isValid ? errors[0] : undefined}
+              tooltipError={true}
             />
           </Box>
         );
@@ -484,30 +542,28 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
           <Box sx={{ display: 'flex', gap: 1 }}>
             <TextField
               size="small"
-              type={selectedField?.dataType === 'time' ? 'time' :
-                    selectedField?.dataType === 'datetime' ? 'datetime-local' :
-                    selectedField?.dataType === 'date' ? 'date' : 'number'}
+              type={getInputType(selectedField?.dataType)}
               value={condition.value[0] || ''}
-              onChange={(e) => handleValueChange(rowIndex, groupIndex, 0, selectedField?.dataType === 'date' || 
-                                                                        selectedField?.dataType === 'time' || 
-                                                                        selectedField?.dataType === 'datetime' ? 
-                                                                        e.target.value : Number(e.target.value))}
+              onChange={(e) => handleValueChange(rowIndex, groupIndex, 0,
+                ['int', 'decimal', 'byte', 'float', 'double', 'number'].includes(selectedField?.dataType || '')
+                  ? Number(e.target.value)
+                  : e.target.value
+              )}
               inputProps={{
-                step: (selectedField?.dataType === 'time' || selectedField?.dataType === 'datetime') ? 1 : undefined // Allow seconds in time and datetime input
+                step: selectedField?.dataType === 'timestamp' ? 1 : undefined
               }}
             />
             <TextField
               size="small"
-              type={selectedField?.dataType === 'time' ? 'time' :
-                    selectedField?.dataType === 'datetime' ? 'datetime-local' :
-                    selectedField?.dataType === 'date' ? 'date' : 'number'}
+              type={getInputType(selectedField?.dataType)}
               value={condition.value[1] || ''}
-              onChange={(e) => handleValueChange(rowIndex, groupIndex, 1, selectedField?.dataType === 'date' || 
-                                                                        selectedField?.dataType === 'time' || 
-                                                                        selectedField?.dataType === 'datetime' ? 
-                                                                        e.target.value : Number(e.target.value))}
+              onChange={(e) => handleValueChange(rowIndex, groupIndex, 1,
+                ['int', 'decimal', 'byte', 'float', 'double', 'number'].includes(selectedField?.dataType || '')
+                  ? Number(e.target.value)
+                  : e.target.value
+              )}
               inputProps={{
-                step: (selectedField?.dataType === 'time' || selectedField?.dataType === 'datetime') ? 1 : undefined // Allow seconds in time and datetime input
+                step: selectedField?.dataType === 'timestamp' ? 1 : undefined
               }}
             />
           </Box>
@@ -526,25 +582,54 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
   };
 
   const renderCondition = (condition: Condition, rowIndex: number, groupIndex: number, groupType: string) => {
-    const selectedField = fields.find(f => f.value === condition.field);
-    const availableOperations = operations.filter(op => 
-      op.category.includes(selectedField?.dataType || '')
-    );
+    const selectedField = lfields.find(f => f.value === condition.field);
+
+    // Map field type to operation category
+    const getOperationCategory = (fieldType: string | undefined) => {
+      if (!fieldType) return '';
+      // All numeric types should match 'number' category
+      if (['int', 'decimal', 'byte', 'float', 'double', 'number'].includes(fieldType)) {
+        return 'number';
+      }
+      if (['date', 'timestamp'].includes(fieldType)) {
+        return 'date';
+      }
+      return fieldType;
+    };
+
+    const availableOperations = operations.filter(op => {
+      const operationCategories = op.category.split('|').map(c => c.trim());
+      return operationCategories.includes(getOperationCategory(selectedField?.dataType));
+    });
+
     const selectedOperation = operations.find(op => op.value === condition.operate);
     const currentGroup = localConditions[groupIndex];
     const isLastRow = rowIndex === (currentGroup.group?.length || 0) - 1;
 
+    // Convert selected field to CodeEditor format
+    const codeEditorFields: CodeEditorField[] = selectedField ? [{
+      name: selectedField.value,
+      dataType: selectedField.dataType
+    }] : [];
+
+    // Validate expression
+    const { isValid, errors } = validateExpression(condition.funcfield || '', codeEditorFields, functions);
+
     return (
       <FilterRow key={rowIndex}>
         <Select
-          options={fields.map(f => ({ label: f.header, value: f.value }))}
+          options={lfields.map(f => ({ label: f.header, value: f.value }))}
           value={condition.field}
           onChange={(value) => handleFieldChange(rowIndex, groupIndex, value || '')}
         />
-        <TextField
-          size="small"
+        <CodeEditor
           value={condition.funcfield}
-          disabled
+          onChange={(value) => handleFuncFieldChange(rowIndex, groupIndex, value)}
+          fields={codeEditorFields}
+          functions={functions}
+          error={!isValid}
+          helperText={!isValid ? errors[0] : undefined}
+          tooltipError={true}
         />
         <Select
           options={availableOperations.map(op => ({ label: op.label, value: op.value }))}
@@ -555,10 +640,10 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
           {renderValueInput(selectedOperation, condition, rowIndex, groupIndex)}
         </Box>
         <OperationButtons>
-          <IconButton 
-            size="small" 
+          <IconButton
+            size="small"
             onClick={() => handleDelete(rowIndex, groupIndex)}
-            sx={{ 
+            sx={{
               color: 'error.main',
               padding: '2px'
             }}
@@ -614,13 +699,13 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
   return (
     <Box>
       {validationErrors && (
-        <Box sx={{ 
-          color: 'error.main', 
-          mb: 2, 
+        <Box sx={{
+          color: 'error.main',
+          mb: 2,
           fontSize: '0.875rem',
           display: 'flex',
           alignItems: 'center',
-          gap: 1 
+          gap: 1
         }}>
           <span>⚠️</span>
           <span>Please complete all required fields, all fields are required.</span>
@@ -630,10 +715,10 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
         // If this is a separator (type is "or" or "and" without group), just render the separator
         if ((conditionGroup.type === 'or' || conditionGroup.type === 'and') && !conditionGroup.group) {
           return (
-            <Box 
+            <Box
               key={groupIndex}
-              sx={{ 
-                textAlign: 'left', 
+              sx={{
+                textAlign: 'left',
                 my: 1,
                 pl: 1,
                 color: conditionGroup.type === 'or' ? theme => theme.palette.secondary.main : theme => theme.palette.primary.main,
@@ -650,7 +735,7 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
           <Box key={groupIndex}>
             {/* Add criteria header if this is the first group or after an OR separator */}
             {(groupIndex === 0 || (groupIndex > 0 && localConditions[groupIndex - 1].type === 'or')) && (
-              <Box sx={{ 
+              <Box sx={{
                 mb: 1,
                 color: 'text.secondary',
                 fontSize: '0.875rem'
@@ -664,7 +749,7 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
                   {conditionGroup.type === 'orgroup' ? 'OR' : 'AND'}
                 </GroupLabel>
               )}
-              {conditionGroup.group?.map((condition, rowIndex) => 
+              {conditionGroup.group?.map((condition, rowIndex) =>
                 renderCondition(condition, rowIndex, groupIndex, conditionGroup.type)
               )}
             </FilterGroup>
@@ -682,7 +767,7 @@ const FilterAssemble: React.FC<FilterAssembleProps> = ({
         </Box>
       ) : (
         <>
-          <Box sx={{ 
+          <Box sx={{
             position: 'relative',
             mt: 3,
             mb: 2,

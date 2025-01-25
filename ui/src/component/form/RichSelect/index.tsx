@@ -2,7 +2,7 @@ import React, { useState, forwardRef } from 'react';
 import Box from '@mui/material/Box';
 import Radio from '@mui/material/Radio';
 import Checkbox from '@mui/material/Checkbox';
-import { styled } from '@mui/material/styles';
+import { styled, SxProps } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
 import TextField from '@mui/material/TextField';
@@ -25,11 +25,12 @@ interface RichSelectProps {
   onChange: (value: string | number | (string | number)[]) => void;
   multiple?: boolean;
   columns?: number;
-  minWidth?: number | string;
-  maxWidth?: number | string;
+  width?: number | string;
   height?: number | string;
   gap?: number;
   disabled?: boolean;
+  imageStyle?: SxProps;
+  titleAlign?: 'left' | 'center' | 'right';
 }
 
 const SelectBox = styled(Box, {
@@ -38,7 +39,7 @@ const SelectBox = styled(Box, {
   position: 'relative',
   border: `1px solid ${selected ? theme.palette.primary.main : theme.palette.divider}`,
   borderRadius: theme.shape.borderRadius,
-  padding: theme.spacing(2),
+  padding: theme.spacing(1),
   cursor: disabled ? 'not-allowed' : 'pointer',
   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
   height: '100%',
@@ -75,8 +76,8 @@ const SelectBox = styled(Box, {
 
   '& .MuiCheckbox-root, .MuiRadio-root': {
     position: 'absolute',
-    top: theme.spacing(1),
-    right: theme.spacing(1),
+    top: 0,
+    right: 0,
     padding: theme.spacing(0.5),
     color: selected ? theme.palette.primary.main : theme.palette.action.active,
     transition: 'all 0.2s ease',
@@ -97,13 +98,10 @@ const SelectBox = styled(Box, {
 }));
 
 const ImageContainer = styled(Box)({
-  width: '100%',
   marginBottom: 8,
   overflow: 'hidden',
   borderRadius: 4,
   '& img': {
-    width: '100%',
-    height: 'auto',
     objectFit: 'cover',
     display: 'block',
   },
@@ -115,11 +113,12 @@ export default function RichSelect({
   onChange,
   multiple = false,
   columns = 3,
-  minWidth = 200,
-  maxWidth = 300,
+  width = 'auto',
   height = 'auto',
   gap = 2,
   disabled = false,
+  imageStyle,
+  titleAlign = 'left',
 }: RichSelectProps) {
   const isSelected = (optionId: string | number) => {
     if (multiple) {
@@ -161,8 +160,7 @@ export default function RichSelect({
             disabled={disabled}
             onClick={() => !disabled && handleSelect(option.id)}
             sx={{
-              minWidth,
-              maxWidth,
+              width,
               height,
             }}
           >
@@ -185,13 +183,13 @@ export default function RichSelect({
             )}
 
             {option.image && (
-              <ImageContainer>
-                <img src={option.image} alt={option.title} />
+              <ImageContainer sx={imageStyle}>
+                <img src={option.image} alt={option.title}/>
               </ImageContainer>
             )}
 
             {option.title && (
-              <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500, textAlign: titleAlign }}>
                 {option.title}
               </Typography>
             )}

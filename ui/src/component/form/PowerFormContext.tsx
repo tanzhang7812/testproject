@@ -10,9 +10,9 @@ interface FormProviderProps {
     children: React.ReactNode;
     onSubmit?: (data: any) => void;
     defaultValue?: Record<string, any>;
-    onValueChange?: (data: any) => void;
     validateForm?: (values: any) => string | undefined;
     triggerInitValidate?: boolean;
+    onValueChange?: (data: any) => void;
 }
 
 export function FormProvider({children, onSubmit, defaultValue,onValueChange,validateForm,triggerInitValidate=false}: FormProviderProps) {
@@ -23,7 +23,22 @@ export function FormProvider({children, onSubmit, defaultValue,onValueChange,val
     const { control, watch,getValues,unregister,formState, handleSubmit,reset,trigger  } = useForm({
         defaultValues: defaultValue || {}, // 设置默认值
         values: defaultValue || {},        // 设置当前值
+        mode:'onChange'
     })
+
+    // const onValueChangeDebounce=useCallback(debounce(onValueChange?onValueChange:()=>{},100),[])
+    // if(onValueChange){
+    //     const watchAllFields = watch();
+    //     if(!isEqual(watchAllFields,defaultValue)){
+    //         onValueChangeDebounce(watchAllFields)
+    //     }
+    // }
+    const onFormValueChange=useCallback(() => {
+        if(onValueChange){
+            const watchAllFields = watch();
+            onValueChange(watchAllFields)
+        }
+    },[onValueChange])
 
     const onSubmitHandler = useCallback((data: any) => {
         if (validateForm) {
@@ -76,7 +91,7 @@ export function FormProvider({children, onSubmit, defaultValue,onValueChange,val
 
     return(
         <form onSubmit={onSubmit ? handleSubmit(onSubmitHandler) : undefined}>
-        <FormContext.Provider value={{control,formState,watch,getValues,defaultValue,onValueChange,formError}}>
+        <FormContext.Provider value={{control,formState,watch,getValues,defaultValue,onFormValueChange,formError}}>
                 {children}
         </FormContext.Provider>
         </form>

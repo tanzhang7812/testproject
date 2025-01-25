@@ -1,9 +1,11 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import { CommonComponentPropsProps } from '../../WorkflowConstants';
 import PowerEditGrid , { ValidationError, GridChangeInfo }from '../../../../component/PowerEditGrid';
+import { ComponentPropsProps } from '../../WorkflowConstants';
+import FieldDisplay from '../../../../component/form/FieldDisplay';
 
-const SelectProps: React.FC<CommonComponentPropsProps> = ({ form,id,props,description,onChange }) => {
+
+const SelectProps: React.FC<ComponentPropsProps> = ({ id,description }) => {
     const handleValidate = (errors: ValidationError[]) => {
         if (errors.length > 0) {
           console.log('Validation errors:', errors);
@@ -19,7 +21,7 @@ const SelectProps: React.FC<CommonComponentPropsProps> = ({ form,id,props,descri
         }
       };
     return (
-    <Box sx={{ height: '100%' }}>
+    <Box sx={{ height: '100%',p:2 }}>
       <Typography variant="body2" color="text.secondary">{description}</Typography>
       <Box sx={{ p: 1, height: 'calc(100% - 50px)' }}>
         <PowerEditGrid 
@@ -49,13 +51,10 @@ const fieldConfig = [
         name: 'name',
         label: 'Name',
         type: 'textinput',
-        required: true,
-        width: 300,
-    },
-    {
-        name: 'dataType',
-        label: 'Data Type',
-        type: 'textinput',
+        width: "*",
+        cell: (value: string,row: any) => {
+            return <FieldDisplay name={value} dataType={row.dataType} color="black"/>
+        } 
     }
 ];
 

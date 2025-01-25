@@ -16,8 +16,14 @@ import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import CallMergeIcon from '@mui/icons-material/CallMerge';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
+import WarningIcon from '@mui/icons-material/Warning';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import ChangeCircleIcon from '@mui/icons-material/ChangeCircle';
 import { NodeData, NodeStatus } from './WorkflowConstants';
 import { useFlowStore } from './flowStore';
+import { useWorkflowActions } from './context/WorkflowContext';
+import { OperationType } from './hooks/SaveHistoryHooks';
+import { ChangeType } from './hooks/SaveHistoryHooks';
 interface RuntimeNodeState {
   [nodeId: string]: {
     status?: NodeStatus;
@@ -163,6 +169,10 @@ const StatusIndicator = styled(Box, {
         return theme.palette.success.main;
       case 'FAIL':
         return theme.palette.error.main;
+      case 'WARNING':
+        return theme.palette.warning.main;
+      case 'RUNNING':
+        return theme.palette.success.main;
       default:
         return 'transparent';
     }
@@ -187,10 +197,12 @@ const CustomNode = ({ data, selected, id }: NodeProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const Icon = iconMap[data.name as keyof typeof iconMap] || StorageIcon;
-  const { setNodes } = useReactFlow();
+  const { onNodesChange,saveHistory } = useWorkflowActions();
+  const { nodes, setNodes } = useFlowStore();
 
 // 使用 useFlowStore 获取运行时状态
-  const nodeStatus = useFlowStore((state) => state.runtimeNodeStates[id]?.status);
+  //const nodeStatus = useFlowStore((state) => state.runtimeNodeStates[id]?.status);
+  const nodeStatus = 'WARNING';
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -203,20 +215,31 @@ const CustomNode = ({ data, selected, id }: NodeProps) => {
   }, []);
 
   const handleNameSubmit = useCallback(() => {
-    if (nodeLabel.trim()) {
+    if (nodeLabel.trim()!==data.label) {
       // 更新节点数据
+      let newNode;
+      let oldNode;
       const updateNode = (node: Node<NodeData>) => {
         if (node.id === id) {
+          oldNode=node;
           node.data = {
             ...node.data,
             label: nodeLabel.trim(),
           };
         }
+        newNode=node;
         return node;
       };
       // 通知 React Flow 更新节点
-    
-      setNodes((nodes: Node[]) => nodes.map(updateNode));
+        //onNodesChange([{type: 'update', id, data: {label: nodeLabel.trim()}}]);
+        setNodes((nodes: Node[]) => nodes.map(updateNode));
+        saveHistory([{
+          type: ChangeType.NODE,
+          id: id,
+          operation: OperationType.UPDATE,  
+          previousValue: oldNode,
+          currentValue: newNode
+        }])
     }
     setIsEditing(false);
   }, [nodeLabel, id]);
@@ -264,11 +287,11 @@ const CustomNode = ({ data, selected, id }: NodeProps) => {
     >
       {renderHandles()}
       <IconWrapper group={data.group}>
-        <Icon sx={{ fontSize: 'inherit' }} />
+        <Icon sx={{ fontSize: '50px' }} />
       </IconWrapper>
       {nodeStatus && (
         <StatusIndicator status={nodeStatus}>
-          {nodeStatus === 'SUCCESS' ? <CheckCircleIcon /> : <ErrorIcon />}
+          {nodeStatus === 'SUCCESS' ? <CheckCircleIcon /> : nodeStatus === 'FAIL' ? <ErrorIcon /> : nodeStatus === 'WARNING' ? <ErrorIcon /> : nodeStatus === 'RUNNING' ? <ChangeCircleIcon /> : null}
         </StatusIndicator>
       )}
       {isEditing ? (
@@ -282,7 +305,7 @@ const CustomNode = ({ data, selected, id }: NodeProps) => {
         />
       ) : (
         <NodeName>
-          {nodeLabel || data.label}
+          {data.label}
         </NodeName>
       )}
     </NodeContainer>

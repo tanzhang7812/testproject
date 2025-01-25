@@ -9,6 +9,11 @@ import ListAltIcon from '@mui/icons-material/ListAlt';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import CallMergeIcon from '@mui/icons-material/CallMerge';
 
+import  {
+  Node,
+  Edge,
+} from 'reactflow';
+
 // Import source components
 import DelimiterReaderProps from './components/source/DelimiterReaderProps';
 import SharedFolderProps from './components/source/SharedFolderProps';
@@ -35,6 +40,26 @@ interface ETLComponentProps {
 }
 
 
+export interface WorkflowConfigProps {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface Variables {
+  key: string;
+  value: string;
+}
+
+export interface WorkflowView {
+  nodes: Node[];
+  edges: Edge[];
+}
+
+export interface ComponentsProps {
+  [key: string]: any;
+}
+
 export interface ETLComponent {
   name: string;
   label: string;
@@ -57,9 +82,7 @@ export interface FormConfig {
 export interface ComponentPropsProps {
   form: FormConfig;
   id: string;
-  props: any;
   description?: string;
-  onChange?: (id: string, values: any) => void;
 }
 
 const delimiterReaderForm: FormConfig = {
@@ -330,7 +353,7 @@ export const iconColors = {
 
 export type GroupType = keyof typeof iconColors;
 
-export type NodeStatus = 'SUCCESS' | 'FAIL' | undefined;
+export type NodeStatus = 'RUNNING' | 'SUCCESS' | 'FAIL' | 'WARNING' | undefined;
 
 export const ComponentDefaultProps = etlComponents.reduce((acc, group) => {
   group.components.forEach(component => {
@@ -344,5 +367,4 @@ export interface NodeData {
   label: string;
   group: string;
   status?: NodeStatus;
-  props: any;
 }

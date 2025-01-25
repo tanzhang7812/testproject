@@ -44,22 +44,24 @@ const options = [
 
 const imageOptions = [
   {
-    id: 'light',
-    title: 'Light Theme',
-    image: 'https://via.placeholder.com/300x200/ffffff/000000?text=Light+Theme',
-    description: 'Clean and bright interface',
+    id: 'full',
+    title: 'Full Join',
+    image: 'src/assets/img/full_join.png',
   },
   {
-    id: 'dark',
-    title: 'Dark Theme',
-    image: 'https://via.placeholder.com/300x200/000000/ffffff?text=Dark+Theme',
-    description: 'Easy on the eyes',
+    id: 'inner',
+    title: 'Inner Join',
+    image: 'src/assets/img/inner_join.png',
   },
   {
-    id: 'custom',
-    title: 'Custom Theme',
-    image: 'https://via.placeholder.com/300x200/2196f3/ffffff?text=Custom+Theme',
-    description: 'Personalized experience',
+    id: 'left',
+    title: 'Left Join',
+    image: 'src/assets/img/left_join.png',
+  },
+  {
+    id: 'right',
+    title: 'Right Join',
+    image: 'src/assets/img/right_join.png',
   },
 ];
 
@@ -112,8 +114,15 @@ export default function RichSelectDemo() {
           value={showMultiple ? multipleValue : singleValue}
           onChange={showMultiple ? setMultipleValue : setSingleValue}
           multiple={showMultiple}
-          columns={3}
-          gap={2}
+          columns={8}
+          gap={1}
+          width={90}
+          height={90}
+          titleAlign='center'
+          imageStyle={{ width: '50px', height: '50px', '& img': {
+            width: 'auto',
+            height: 'auto',
+          } }}
         />
       </Paper>
     </Box>

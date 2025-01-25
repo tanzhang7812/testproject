@@ -14,6 +14,7 @@ import Checkbox from '@mui/material/Checkbox';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import dayjs from 'dayjs';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
@@ -35,6 +36,7 @@ interface FieldConfig {
     label: string;
     value: string | number;
   }>;
+  cell?: (value: any, row: any) => React.ReactNode;
 }
 
 interface RowData {
@@ -109,6 +111,7 @@ export const validateGrid = (data: RowData[], fields: FieldConfig[]): Validation
       // 根据字段类型进行校验
       switch (field.type) {
         case 'date':
+        case 'datetime':
           if (value && !dayjs(value).isValid()) {
             errors.push({
               rowId: row.id,
@@ -126,7 +129,6 @@ export const validateGrid = (data: RowData[], fields: FieldConfig[]): Validation
             });
           }
           break;
-        // 可以添加更多类型的��验
       }
     });
   });
@@ -149,11 +151,16 @@ const ErrorCell = styled(Box)(({ theme }) => ({
   }
 }));
 
-// 修改 CustomField 组件，添加 key 属性以保持焦点
-const CustomField = ({ type, value, onChange, options, disabled, error, helperText, rowId, fieldName, ...props }: any) => {
+// 修改 CustomField 组件
+const CustomField = ({ type, value, onChange, options, disabled, error, helperText, rowId, fieldName, cell, row, ...props }: any) => {
   const field = (
     <Box className={error ? 'error-field' : ''}>
       {(() => {
+        // 如果有自定义渲染函数，优先使用
+        if (cell) {
+          return cell(value, row);
+        }
+
         switch (type) {
           case 'select':
             return (
@@ -186,6 +193,24 @@ const CustomField = ({ type, value, onChange, options, disabled, error, helperTe
                 key={`${rowId}-${fieldName}`}
                 value={value ? dayjs(value) : null}
                 onChange={(newValue) => onChange(newValue?.format('YYYY-MM-DD'))}
+                disabled={disabled}
+                slotProps={{
+                  textField: {
+                    size: 'small',
+                    fullWidth: true,
+                    disabled,
+                    error,
+                    ...props
+                  }
+                }}
+              />
+            );
+          case 'datetime':
+            return (
+              <DateTimePicker
+                key={`${rowId}-${fieldName}`}
+                value={value ? dayjs(value) : null}
+                onChange={(newValue) => onChange(newValue?.format('YYYY-MM-DD HH:mm:ss'))}
                 disabled={disabled}
                 slotProps={{
                   textField: {
@@ -303,7 +328,6 @@ const ScrollContainer = styled('div')({
 });
 
 const TableWrapper = styled('div')({
-  position: 'absolute',
   top: 0,
   left: 0,
   right: 0,
@@ -549,6 +573,8 @@ export default function PowerEditGrid({
           helperText={error}
           rowId={row.id}
           fieldName={field.name}
+          cell={field.cell}
+          row={row}
         />
       </ErrorCell>
     );
@@ -692,6 +718,8 @@ export default function PowerEditGrid({
                                         helperText={getFieldError(row.id, field.name)}
                                         rowId={row.id}
                                         fieldName={field.name}
+                                        cell={field.cell}
+                                        row={row}
                                       />
                                     </StyledTableCell>
                                   ))}
@@ -780,6 +808,8 @@ export default function PowerEditGrid({
                               helperText={getFieldError(row.id, field.name)}
                               rowId={row.id}
                               fieldName={field.name}
+                              cell={field.cell}
+                              row={row}
                             />
                           </StyledTableCell>
                         ))}

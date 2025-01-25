@@ -1,28 +1,15 @@
-import React from 'react';
-import { Box, Typography, Button, IconButton } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { Box, Typography, Button, IconButton, Tabs, Tab } from '@mui/material';
 import PowerForm from '../../../component/form/PowerForm';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import { FormProvider } from '../../../component/form/PowerFormContext';
 import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
-
-interface Parameter {
-  key: string;
-  value: string;
-}
-
-interface WorkflowConfig {
-  id: string;
-  name: string;
-  description: string;
-  parameters: Parameter[];
-}
-
-interface WorkflowPropsProps {
-  config: WorkflowConfig;
-  onChange?: (config: WorkflowConfig) => void;
-}
+import { useWorkflow, useWorkflowState } from '../context/WorkflowContext';
+import { Variables } from '../WorkflowConstants';
+import { DynamicItem } from '../../../component/DynamicItemManage';
+import DynamicItemManage from '../../../component/DynamicItemManage';
 
 const PREDEFINED_FUNCTIONS = [
   'current_day()',
@@ -49,8 +36,8 @@ const basicFields = [
   },
 ];
 
-const ParameterList = ({ parameters, onAdd, onDelete, onChange }: {
-  parameters: Parameter[];
+const ParameterList = ({ variables, onAdd, onDelete, onChange }: {
+  variables: Variables[];
   onAdd: () => void;
   onDelete: (index: number) => void;
   onChange: (index: number, field: 'key' | 'value', value: string) => void;
@@ -58,16 +45,16 @@ const ParameterList = ({ parameters, onAdd, onDelete, onChange }: {
   return (
     <Box>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Typography variant="subtitle2" sx={{ flex: 1 }}>Parameters</Typography>
+        <Typography variant="subtitle2" sx={{ flex: 1 }}>Variables</Typography>
         <Button
           size="small"
           startIcon={<AddIcon />}
           onClick={onAdd}
         >
-          Add Parameter
+          Add Variable
         </Button>
       </Box>
-      {parameters.map((param, index) => (
+      {variables.map((variable, index) => (
         <Box 
           key={index}
           sx={{ 
@@ -83,9 +70,9 @@ const ParameterList = ({ parameters, onAdd, onDelete, onChange }: {
           <TextField
             size="small"
             label="Key"
-            value={param.key}
+            value={variable.key}
             onChange={(e) => {
-                //onChange(index, 'key', e.target.value)
+                onChange(index, 'key', e.target.value)
             }}
             sx={{ flex: 1 }}
           />
@@ -93,12 +80,14 @@ const ParameterList = ({ parameters, onAdd, onDelete, onChange }: {
             size="small"
             freeSolo
             options={PREDEFINED_FUNCTIONS}
-            value={param.value}
+            value={variable.value}
             onChange={(_, newValue) => {
-                //onChange(index, 'value', newValue || '')
+                onChange(index, 'value', newValue || '')
             }}
-            onInputChange={(_, newValue) =>{
-                // onChange(index, 'value', newValue)
+            onInputChange={(_, newValue, reason) =>{
+              if (reason === 'input') {
+                onChange(index, 'value', newValue)
+              }
             }}
             renderInput={(params) => (
               <TextField 
@@ -112,7 +101,7 @@ const ParameterList = ({ parameters, onAdd, onDelete, onChange }: {
           <IconButton 
             size="small" 
             onClick={() =>{
-                // onDelete(index)
+               onDelete(index)
             }}
             sx={{ 
               color: 'error.main',
@@ -129,60 +118,157 @@ const ParameterList = ({ parameters, onAdd, onDelete, onChange }: {
   );
 };
 
-const WorkflowProps = ({ config, onChange }: WorkflowPropsProps) => {
-    
-  const handleAddParameter = () => {
-    const newConfig = {
-      ...config,
-      parameters: [
-        ...config.parameters,
-        { key: '', value: '' }
-      ]
-    };
-    onChange?.(newConfig);
+const WorkflowProps = () => {
+
+  const { workflowInfoProps, variablesProps,targetTab, componentsPropsProps, handleWorkflowPropsChange } = useWorkflow()
+  const [currentTab, setCurrentTab] = useState(targetTab.workflowprops);
+  const [variables, setVariables] = useState(variablesProps.variables)
+  useEffect(()=>{
+    setVariables(variablesProps.variables)
+  },[variablesProps.variables])
+  useEffect(()=>{
+    setCurrentTab(targetTab.workflowprops)
+  },[targetTab.workflowprops])
+  const handleAddVariable = () => {
+    const newVariables = [...variables, { key: '', value: '' }]
+    handleWorkflowPropsChange('variables', newVariables)
+    setVariables(newVariables)
   };
 
-  const handleDeleteParameter = (index: number) => {
-    const newConfig = {
-      ...config,
-      parameters: config.parameters.filter((_, i) => i !== index)
-    };
-    onChange?.(newConfig);
+  const handleDeleteVariable = (index: number) => {
+    const newVariables = variables.filter((_, i) => i !== index)
+    handleWorkflowPropsChange('variables', newVariables)
+    setVariables(newVariables)
   };
 
-  const handleParameterChange = (index: number, field: 'key' | 'value', value: string) => {
-    const newParameters = [...config.parameters];
-    newParameters[index] = {
-      ...newParameters[index],
+  const handleVariableChange = (index: number, field: 'key' | 'value', value: string) => {
+    const newVariables = [...variables];
+    newVariables[index] = {
+      ...newVariables[index],
       [field]: value
     };
-    const newConfig = {
-      ...config,
-      parameters: newParameters
-    };
-    onChange?.(newConfig);
+    handleWorkflowPropsChange('variables', newVariables)
+    setVariables(newVariables)
   };
-
+  const [items, setItems] = useState<DynamicItem[]>(initialItems);
   return (
-    <Box sx={{height:'100%',p:2}}>
-      <FormProvider defaultValue={{
-          id: config.id,
-          name: config.name,
-          description: config.description,
-        }}>
-        <PowerForm
-          fields={basicFields}
-          labelWidth={100}
-        />
-      </FormProvider>
-      <ParameterList
-        parameters={config.parameters}
-        onAdd={handleAddParameter}
-        onDelete={handleDeleteParameter}
-        onChange={handleParameterChange}
-      />
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Tabs 
+        value={currentTab} 
+        onChange={(_, newValue) => setCurrentTab(newValue)}
+        sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
+      >
+        <Tab label="Information" />
+        <Tab label="Variables" />
+      </Tabs>
+
+      {currentTab === 0 && (
+        <Box sx={{ flex: 1, overflow: 'auto',p:1  }}>
+          <FormProvider 
+            defaultValue={{
+              id: workflowInfoProps.id,
+              name: workflowInfoProps.name,
+              description: workflowInfoProps.description,
+            }}
+          onValueChange={(values) => {
+            handleWorkflowPropsChange('workflowInfo', values);
+          }}
+        >
+          <PowerForm
+            fields={basicFields}
+            labelWidth={100}
+          />
+        </FormProvider>
+        </Box>
+      )}
+
+      {currentTab === 1 && (
+        <Box sx={{ flex: 1, overflow: 'auto',p:2 }}>
+            <DynamicItemManage
+                    title=""
+                    fields={fields}
+                    items={items}
+                    onChange={setItems}
+                    defaultValue={{
+                        name: '',
+                        type: 'CurrentDay',
+                        format: 'YYYY-MM-DD'
+                    }}
+                    group={group}
+                    dynamicFormRef={dynamicFormRef}
+                    idField="name"
+                />
+        </Box>
+      )}
     </Box>
   );
 };
 
 export default WorkflowProps; 
+
+
+const fields = [
+  {
+      name: 'name',
+      label: 'Name',
+      type: 'textinput',
+      required: true,
+      validateStrict: (value: string) => {
+        if (!value) return true; // Skip validation if empty
+        const validPattern = /^[a-zA-Z0-9_\.]+$/;
+        if(!validPattern.test(value)){
+            return 'Name must be made up of letters, numbers, underscores, and dots';
+        }
+        return true;
+    }
+  },
+  {
+      name: 'type',
+      label: 'Type',
+      type: 'select',
+      required: true,
+      options:[{label:'CurrentDay',value:'CurrentDay'},{label:'PlainText',value:'PlainText'}],
+  }
+];
+
+const group = {
+  'param': {
+      name: 'Parameter',
+      header: 'divider',    
+      orient: 'v',
+      inline: true
+  }
+};
+
+const dynamicFormRef = {
+  'type': {
+      'CurrentDay': [
+          {
+              name: 'format',
+              label: 'Format',
+              type: 'select',
+              required: true,
+              options:[{label:'YYYY-MM-DD',value:'YYYY-MM-DD'},{label:'YYYY/MM/DD',value:'YYYY/MM/DD'}],
+              group:'param',
+          }
+      ],
+      'PlainText': [
+          {
+              name: 'format',
+              label: 'Format',
+              type: 'textinput',
+              required: true,
+              group:'param',
+          }
+      ]
+  }
+};
+
+const initialItems: DynamicItem[] = [
+  {
+      id: '1',
+      name: 'Current Date',
+      type: 'CurrentDay',
+      format: 'YYYY-MM-DD'
+  }
+];

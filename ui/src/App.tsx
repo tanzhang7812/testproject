@@ -15,6 +15,9 @@ import Nav from "./nav/index.tsx";
 import {SettingsProvider, useSettings} from "./AppContext.tsx";
 import SecurityIcon from '@mui/icons-material/Security';
 import AccessControl from './pages/access-control';
+import { AlertProvider } from "./component/Alert/AlertService.tsx";
+import UnionAssembleDemo from './pages/componentsplaybook/UnionAssembleDemo.tsx';
+import DynamicItemManageDemo from './pages/componentsplaybook/DynamicItemManageDemo';
 
 const Welcome = React.lazy(() => import("./pages/Welcome.tsx"));
 const Welcome2 = React.lazy(() => import("./pages/Welcome2.tsx"));
@@ -22,14 +25,19 @@ const FormDisplay = React.lazy(() => import("./pages/componentsplaybook/FormDisp
 const NavContentDisplayDemo = React.lazy(() => import("./pages/componentsplaybook/NavContentDisplayDemo.tsx"));
 const DragZoomPopupDemo = React.lazy(() => import("./pages/componentsplaybook/DragZoomPopupDemo.tsx"));
 const RichTextEditorDemo = React.lazy(() => import("./pages/componentsplaybook/RichTextEditorDemo.tsx"));
+const AlertDemo = React.lazy(() => import("./pages/componentsplaybook/AlertDemo.tsx"));
 const Workspace = React.lazy(() => import("./pages/workspace/index.tsx"));
 const PowerEditGridDemo = React.lazy(() => import("./pages/componentsplaybook/PowerEditGridDemo"));
 const FilterDemo = React.lazy(() => import("./pages/filter-demo"));
+const WhereCondition = React.lazy(() => import("./pages/filter-demo/WhereCondition"));
 const TableDemo = React.lazy(() => import("./pages/table-demo"));
 const UserManagement = React.lazy(() => import("./pages/access-control/UserManagement"));
 const GroupManagement = React.lazy(() => import("./pages/access-control/GroupManagement"));
 const Entitlement = React.lazy(() => import("./pages/access-control/Entitlement"));
 const EntityManagement = React.lazy(() => import("./pages/access-control/EntityManagement"));
+const CodeEditorDemo = React.lazy(() => import("./pages/componentsplaybook/CodeEditorDemo.tsx"));
+const RichSelectDemo = React.lazy(() => import("./pages/componentsplaybook/RichSelectDemo.tsx"));
+const ComponentDevelop = React.lazy(() => import("./pages/workspace/ComponentDevelop.tsx"));
 
 // 添加类型定义
 interface Menu {
@@ -61,6 +69,16 @@ function createThemeWithMode(mode: 'light' | 'dark') {
         },
          // 添加组件默认样式配置
          components: {
+            MuiInputLabel: {
+                styleOverrides: {
+                    root: {
+                        transform: 'translate(14px, 6px) scale(0.75)', 
+                    },
+                    shrink: {
+                        transform: 'translate(14px, -10px) scale(0.75)',  // Adjust shrunk label position
+                    }
+                }
+            },
             MuiTextField: {
                 styleOverrides: {
                     root: {
@@ -145,7 +163,9 @@ function App() {
     return (
         <ThemeProvider theme={theme}>
             {router ? (
-                <RouterProvider router={router}/>
+                <AlertProvider>
+                    <RouterProvider router={router}/>
+                </AlertProvider>
             ) : (
                 <BrowserRouter>
                     <Nav
@@ -199,6 +219,11 @@ const cmenus: Menu[] = [
         icon: HandymanIcon,
         children: [
             {
+                key: "alert",
+                label: "Alert",
+                component: <Suspense fallback={<div>Loading...</div>}><AlertDemo/></Suspense>,
+            },
+            {
                 key: "form",
                 label: "Form",
                 component: <Suspense fallback={<div>Loading...</div>}><FormDisplay/></Suspense>,
@@ -207,6 +232,11 @@ const cmenus: Menu[] = [
                 key: "table",
                 label: "Table",
                 component: <Suspense fallback={<div>Loading...</div>}><TableDemo/></Suspense>,
+            },
+            {
+                key: "richSelect",
+                label: "Rich Select",
+                component: <Suspense fallback={<div>Loading...</div>}><RichSelectDemo/></Suspense>,
             },
             {
                 key: "richTextEditor",
@@ -229,9 +259,34 @@ const cmenus: Menu[] = [
                 component: <Suspense fallback={<div>Loading...</div>}><PowerEditGridDemo/></Suspense>,
             },
             {
+                key: "whereCondition",
+                label: "Where Condition",
+                component: <Suspense fallback={<div>Loading...</div>}><WhereCondition/></Suspense>,
+            },
+            {
                 key: "filterAssemble",
                 label: "Filter Assemble",
                 component: <Suspense fallback={<div>Loading...</div>}><FilterDemo /></Suspense>
+            },
+            {
+                key: "codeEditor",
+                label: "Code Editor",
+                component: <Suspense fallback={<div>Loading...</div>}><CodeEditorDemo/></Suspense>,
+            },
+            {
+                key: "componentDevelop",
+                label: "Component Develop",
+                component: <Suspense fallback={<div>Loading...</div>}><ComponentDevelop/></Suspense>,
+            },
+            {
+                key: "union-assemble",
+                label: "Union Assemble",
+                component: <Suspense fallback={<div>Loading...</div>}><UnionAssembleDemo/></Suspense>,
+            },
+            {
+                key: "dynamic-item-manage",
+                label: "Dynamic Item Manage",
+                component: <Suspense fallback={<div>Loading...</div>}><DynamicItemManageDemo/></Suspense>,
             }
         ],
     }

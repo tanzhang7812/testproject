@@ -86,7 +86,14 @@ const [expanded, setExpanded] = useState<string[]>(() =>
                 <Typography>{group.label}</Typography>
               </AccordionSummary>
               <AccordionDetails>
-                <List component="div" disablePadding>
+                <List component="div" disablePadding
+                 sx={{ 
+                  pointerEvents: 'none', // 添加这个
+                  '& > *': {
+                    pointerEvents: 'auto' // 添加这个
+                  }
+                }}
+                >
                   {filteredGroup.components.map((component) => {
                     const Icon = component.icon;
                     return (
@@ -94,6 +101,7 @@ const [expanded, setExpanded] = useState<string[]>(() =>
                         key={component.name}
                         draggable
                         onDragStart={(event) => {
+                          event.stopPropagation();
                           event.dataTransfer.setData('application/reactflow', 'default');
                           event.dataTransfer.setData('application/nodeName', component.name);
                           event.dataTransfer.setData('application/nodeLabel', component.label);

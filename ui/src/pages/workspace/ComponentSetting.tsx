@@ -13,28 +13,25 @@ import { alpha } from '@mui/material/styles';
 import SettingsIcon from '@mui/icons-material/Settings';
 import PreviewIcon from '@mui/icons-material/Preview';
 import { useWorkflowState } from './context/WorkflowContext';
-interface ComponentSettingProps {
-  workflowInfo: {
-    id: string;
-    name: string;
-    description: string;
-    parameters: { key: string; value: string; }[];
-  };
-  onWorkflowInfoChange?: (info: any) => void;
-  onNodeChange?: (nodeId: string, props: any) => void;
-}
+// interface ComponentSettingProps {
+//   workflowInfo: {
+//     id: string;
+//     name: string;
+//     description: string;
+//     parameters: { key: string; value: string; }[];
+//   };
+//   onWorkflowInfoChange?: (info: any) => void;
+//   onNodeChange?: (nodeId: string, props: any) => void;
+// }
 
-const ComponentSetting = ({  workflowInfo, onWorkflowInfoChange,onNodeChange }: ComponentSettingProps) => {
+const ComponentSetting = ({}) => {
   const [settingExpanded, setSettingExpanded] = useState(false);
   const { selectedNode } = useWorkflowState();
   // 根据选中的节点找到对应的组件
   const renderComponent = () => {
     if (!selectedNode) {
       return (
-        <WorkflowProps
-          config={workflowInfo}
-          onChange={onWorkflowInfoChange}
-        />
+        <WorkflowProps/>
       );
     }
 
@@ -51,8 +48,6 @@ const ComponentSetting = ({  workflowInfo, onWorkflowInfoChange,onNodeChange }: 
       key={selectedNode.id}
       description={componentConfig.description}
       id={selectedNode.id}
-      props={selectedNode.data.props}
-      onChange={(props: any) => onNodeChange?.(selectedNode.id, props)}
     />;
   };
 

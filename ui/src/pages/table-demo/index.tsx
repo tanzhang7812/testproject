@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Box, Chip } from '@mui/material';
+import { Box, Chip, Typography } from '@mui/material';
 import PowerDataGrid, { ColumnConfig } from '../../component/PowerDataGrid';
 import PreviewIcon from '@mui/icons-material/Preview';
 import DownloadIcon from '@mui/icons-material/Download';
+import FieldDisplay from '../../component/form/FieldDisplay';
 
 // Sample data with two-level structure
 const initialRows = [
@@ -44,6 +45,16 @@ const columns: ColumnConfig[] = [
       type: 'text',
       required: true,
     },
+    renderHeader: (params) => ( 
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center',
+        fontSize: '0.975rem',
+        fontWeight: 800,
+      }}>
+        <FieldDisplay name={params.colDef.headerName} dataType="string" color="black" />
+      </Box>
+    )
   },
   {
     field: 'description',
@@ -62,6 +73,15 @@ const columns: ColumnConfig[] = [
       type: 'number',
       required: true,
     },
+    renderHeader: (params) => ( 
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center',
+        gap: 1
+      }}>
+        <FieldDisplay name={params.colDef.headerName} dataType="number" color="black" />
+      </Box>
+    )
   },
   {
     field: 'birthday',
@@ -71,6 +91,12 @@ const columns: ColumnConfig[] = [
       type: 'date',
       required: true,
     },
+    renderHeader: (params) => ( 
+      <Box sx={{ 
+      }}>
+        <FieldDisplay name={params.colDef.headerName} dataType="date" color="black" />
+      </Box>
+    )
   },
   {
     field: 'department',

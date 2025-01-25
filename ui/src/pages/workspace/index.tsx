@@ -8,34 +8,35 @@ import WorkflowChart from './WorkflowChart';
 import { WorkspaceContainer, WSDesignContainer, WorkflowDesigner, WorkflowResultContainer, StyledResizableBox, DesignerContainer, WorkflowChartContainer } from './styled';
 import { UnfoldMore } from '@mui/icons-material';
 import ComponentListGroup from './ComponentListGroup';
-import { NodeData } from './WorkflowConstants';
+import { NodeData, WorkflowConfigProps, Variables, ComponentsProps, WorkflowView } from './WorkflowConstants';
 import ComponentSetting from './ComponentSetting';
 import WorkflowResult from './WorkflowResult';
 import { WorkflowProvider } from './context/WorkflowContext';
 import { GridColDef } from '@mui/x-data-grid';
 
-interface WorkflowConfigProps {
-  id: string;
-  name: string;
-  description: string;
-  parameters: Array<{
-    key: string;
-    value: string;
-  }>;
-}
 
 const defaultWorkflowInfo: WorkflowConfigProps = {
   id: '123',
   name: 'test',
-  description: 'test',
-  parameters: [
-    { key: 'db_process_id', value: '<db_process_id>' },
-    { key: 'smb_process_id', value: 'test456' },
-    { key: 'current_day', value: 'current_day()' },
-  ]
+  description: 'test'
 };
 
-const defaultComponents={
+const defaultVariables: Variables[] = [
+  { key: 'db_process_id', value: '<db_process_id>' },
+  { key: 'smb_process_id', value: 'test456' },
+  { key: 'current_day', value: 'current_day()' },
+];
+
+const defaultComponentsProps: ComponentsProps = {
+  "source_CSVReader_BrfcO_kNk_0":{
+    "delimiter":"\t",
+    "skip":0,
+    "hasHeader":true
+  },
+  "source_Fileuploader_6RImp_luG_1":{}
+}
+
+const defaultWorkflow: WorkflowView = {
   "nodes": [
     {
       "id": "source_CSVReader_BrfcO_kNk_0",
@@ -47,15 +48,11 @@ const defaultComponents={
       "data": {
         "name": "CSVReader",
         "label": "CSV Reader",
-        "group": "source",
-        "props":{
-          "delimiter":"\t",
-          "hasHeader":true
-        }
+        "group": "source"
       },
       "selected": false,
-      "width": 42,
-      "height": 42,
+      "width": 60,
+      "height": 60,
       "positionAbsolute": {
         "x": 270,
         "y": 180
@@ -75,12 +72,173 @@ const defaultComponents={
         "group": "source"
       },
       "selected": false,
-      "width": 42,
-      "height": 42,
+      "width": 60,
+      "height": 60,
       "positionAbsolute": {
         "x": 90,
         "y": 150
       }
+    },
+    {
+      "id": "datatransform_Join_nWdYr_rn5_1",
+      "type": "default",
+      "position": {
+        "x": 345,
+        "y": 360
+      },
+      "data": {
+        "name": "Join",
+        "label": "Join",
+        "group": "datatransform"
+      },
+      "selected": false,
+      "width": 60,
+      "height": 60,
+      "positionAbsolute": {
+        "x": 345,
+        "y": 360
+      }
+    },
+    {
+      "id": "datatransform_Select_WZZxh_ubQ_2",
+      "type": "default",
+      "position": {
+        "x": 555,
+        "y": 225
+      },
+      "data": {
+        "name": "Select",
+        "label": "Select",
+        "group": "datatransform"
+      },
+      "selected": false,
+      "width": 60,
+      "height": 60,
+      "positionAbsolute": {
+        "x": 555,
+        "y": 225
+      }
+    },
+    {
+      "id": "datatransform_Group_U56Q9_Z12_3",
+      "type": "default",
+      "position": {
+        "x": 705,
+        "y": 405
+      },
+      "data": {
+        "name": "Group",
+        "label": "Group",
+        "group": "datatransform"
+      },
+      "selected": false,
+      "width": 60,
+      "height": 60,
+      "positionAbsolute": {
+        "x": 705,
+        "y": 405
+      }
+    },
+    {
+      "id": "datatransform_Union_j3FWw_hB0_4",
+      "type": "default",
+      "position": {
+        "x": 540,
+        "y": 510
+      },
+      "data": {
+        "name": "Union",
+        "label": "Union",
+        "group": "datatransform"
+      },
+      "selected": false,
+      "width": 60,
+      "height": 60,
+      "positionAbsolute": {
+        "x": 540,
+        "y": 510
+      }
+    },
+    {
+      "id": "output_ExcelWriter_TKWJe_A5U_5",
+      "type": "default",
+      "position": {
+        "x": 840,
+        "y": 225
+      },
+      "data": {
+        "name": "ExcelWriter",
+        "label": "Excel Writer",
+        "group": "output"
+      },
+      "selected": false,
+      "width": 60,
+      "height": 60,
+      "positionAbsolute": {
+        "x": 840,
+        "y": 225
+      }
+    },
+    {
+      "id": "output_CsvWriter_YWUyE_iG9_6",
+      "type": "default",
+      "position": {
+        "x": 960,
+        "y": 420
+      },
+      "data": {
+        "name": "CsvWriter",
+        "label": "Csv Writer",
+        "group": "output"
+      },
+      "selected": false,
+      "width": 60,
+      "height": 60,
+      "positionAbsolute": {
+        "x": 960,
+        "y": 420
+      }
+    },
+    {
+      "id": "output_SFTP_7nRtZ_Nwg_7",
+      "type": "default",
+      "position": {
+        "x": 840,
+        "y": 570
+      },
+      "data": {
+        "name": "SFTP",
+        "label": "SFTP",
+        "group": "output"
+      },
+      "selected": false,
+      "width": 60,
+      "height": 60,
+      "positionAbsolute": {
+        "x": 840,
+        "y": 570
+      }
+    },
+    {
+      "id": "output_SharedFolder_Na6up_KRb_8",
+      "type": "default",
+      "position": {
+        "x": 1050,
+        "y": 585
+      },
+      "data": {
+        "name": "SharedFolder",
+        "label": "Shared Folder",
+        "group": "output"
+      },
+      "selected": true,
+      "width": 60,
+      "height": 60,
+      "positionAbsolute": {
+        "x": 1050,
+        "y": 585
+      },
+      "dragging": false
     }
   ],
   "edges": [
@@ -97,15 +255,10 @@ const defaultComponents={
       "id": "reactflow__edge-source_Fileuploader_6RImp_luG_1-source_CSVReader_BrfcO_kNk_0",
       "selected": false
     }
-  ],
-  "viewport": {
-    "x": 0,
-    "y": 0,
-    "zoom": 1
-  }
+  ]
 }
 
-export default function Workspace({workflowInfo=defaultWorkflowInfo,components=defaultComponents}) {
+export default function Workspace({workflowInfo=defaultWorkflowInfo,variables=defaultVariables,workflowView=defaultWorkflow,componentsProps=defaultComponentsProps}:{workflowInfo:WorkflowConfigProps,variables:Variables[],workflowView:WorkflowView,componentsProps:ComponentsProps}) {
   // 计算初始高度和最小高度
   const containerHeight = window.innerHeight - 50; // 减去 header 高度
   const initialHeight = containerHeight * 0.6; // 初始高度 60%
@@ -113,31 +266,28 @@ export default function Workspace({workflowInfo=defaultWorkflowInfo,components=d
   const maxHeight = containerHeight * 0.8; // 最大高度 80%
 
   const [height, setHeight] = useState(initialHeight);
-  const [workflowInfoState, setWorkflowInfoState] = useState(workflowInfo);
-  const [componentsState, setComponentsState] = useState(components);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const onResize = (e: React.SyntheticEvent, { size }: { size: { width: number; height: number } }) => {
     setHeight(size.height);
   };
 
-  const handleNodeSelect = useCallback((node: Node<NodeData> | null) => {
-    setSelectedNode(node);
-  }, []);
+  // const handleNodeSelect = useCallback((node: Node<NodeData> | null) => {
+  //   setSelectedNode(node);
+  // }, []);
 
-  const handleWorkflowInfoChange = useCallback((newInfo: WorkflowConfigProps) => {
-    setWorkflowInfoState(newInfo);
-    setHasUnsavedChanges(true);
-  }, []);
+  // const handleWorkflowInfoChange = useCallback((newInfo: WorkflowConfigProps) => {
+  //   setWorkflowInfoState(newInfo);
+  //   setHasUnsavedChanges(true);
+  // }, []);
 
    // 处理流程图变更（新增/删除节点、连线等）
-   const handleFlowChange = useCallback(() => {
-    setHasUnsavedChanges(true);
-  }, []);
+  //  const handleFlowChange = useCallback(() => {
+  //   setHasUnsavedChanges(true);
+  // }, []);
   
-  const handleNodeChange = useCallback((nodeId: string, props: any) => {
-    setHasUnsavedChanges(true);
-  }, []);
+  // const handleNodeChange = useCallback((nodeId: string, props: any) => {
+  //   setHasUnsavedChanges(true);
+  // }, []);
 
   const [tabValue, setTabValue] = useState(0);
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
@@ -213,7 +363,7 @@ export default function Workspace({workflowInfo=defaultWorkflowInfo,components=d
   }, [inputSchema]);
 
   return (
-    <WorkflowProvider defaultNodes={componentsState.nodes} defaultEdges={componentsState.edges} defaultViewport={componentsState.viewport}>
+    <WorkflowProvider defaultNodes={workflowView.nodes} defaultEdges={workflowView.edges} workflowInfo={workflowInfo} variables={variables} componentsProps={componentsProps} initialNodeTimestamps={{}} >
     <WorkspaceContainer>
       <WSHeader />
       <WSDesignContainer>
@@ -234,16 +384,8 @@ export default function Workspace({workflowInfo=defaultWorkflowInfo,components=d
             <DesignerContainer>
               <ComponentListGroup />
               <WorkflowChartContainer>
-                <WorkflowChart
-                  defaultViewport={componentsState.viewport}
-                  onChange={handleFlowChange}
-                  hasUnsavedChanges={hasUnsavedChanges}
-                />
-                <ComponentSetting
-                  workflowInfo={workflowInfoState}
-                  onWorkflowInfoChange={handleWorkflowInfoChange}
-                  onNodeChange={handleNodeChange}
-                />
+                <WorkflowChart/>
+                <ComponentSetting/>
               </WorkflowChartContainer>
             </DesignerContainer>
           </WorkflowDesigner>

@@ -1,23 +1,25 @@
 import React, { useState } from 'react';
 import { Box, Typography } from '@mui/material';
-import { CommonComponentPropsProps } from '../../WorkflowConstants';
-import FilterAssemble from '../../../../component/FilterAssemble';
+import FilterAssemble, { ConditionGroup, Field } from '../../../../component/FilterAssemble';
+import { ComponentPropsProps } from '../../WorkflowConstants';
 
-const FilterProps: React.FC<CommonComponentPropsProps> = ({ form,id,props,description,onChange }) => {
+const FilterProps: React.FC<ComponentPropsProps> = ({ id,description }) => {
     const [conditions, setConditions] = useState(initialConditions);
 
-    const handleChange = (newConditions: typeof conditions) => {
+    const handleChange = (newConditions: ConditionGroup[]) => {
       setConditions(newConditions);
       console.log('Filter conditions changed:', newConditions);
     };
     return (
-    <Box>
+    <Box sx={{height:'100%',p:2}}>
       <Typography variant="body2" color="text.secondary">{description}</Typography>
       <FilterAssemble
-        fields={fields}
+        lfields={fields}
+        rfields={fields}
         operations={operations}
         conditions={conditions}
         onChange={handleChange}
+        drawerPosition='left'
       />
     </Box>
   );
@@ -26,7 +28,7 @@ const FilterProps: React.FC<CommonComponentPropsProps> = ({ form,id,props,descri
 export default FilterProps; 
 
 
-const fields = [
+const fields: Field[] = [
     { value: "name", dataType: 'string', header: 'Name' },
     { value: "age", dataType: 'number', header: 'Age' },
     { value: "birthday", dataType: 'date', header: 'Birthday' },

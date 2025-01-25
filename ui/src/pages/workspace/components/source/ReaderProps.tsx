@@ -5,45 +5,29 @@ import PowerForm from '../../../../component/form/PowerForm';
 import { FormProvider } from '../../../../component/form/PowerFormContext';
 import PowerEditGrid from '../../../../component/PowerEditGrid';
 import { CircularProgress } from '@mui/material';
+import { useWorkflow } from '../../context/WorkflowContext';
+import TabPanel from '../../../../component/tab/TabPanel';
 
-function TabPanel(props) {
-    const { children, value, index, ...other } = props;
 
-    return (
-        <div
-            role="tabpanel"
-            hidden={value !== index}
-            id={`simple-tabpanel-${index}`}
-            aria-labelledby={`simple-tab-${index}`}
-            {...other}
-        >
-            {value === index && (
-                <Box p={3}>
-                    <Typography>{children}</Typography>
-                </Box>
-            )}
-        </div>
-    );
-}
-
-const ReaderProps: React.FC<ComponentPropsProps> = ({ form, id, props, description, onChange }) => {
+const ReaderProps: React.FC<ComponentPropsProps> = ({ form, id, description }) => {
     const [value, setValue] = React.useState(0);
     const [loading, setLoading] = React.useState(true);
+    const {componentsPropsProps,handleWorkflowPropsChange} = useWorkflow()
+    const props = componentsPropsProps[id]
     // Handle tab change
     const handleChange = (event, newValue) => {
         setValue(newValue);
     };
     return (
         <Box sx={{ height: '100%' }}>
-            <Tabs value={value} onChange={handleChange} aria-label="csv configuration tabs">
+            <Tabs value={value} onChange={handleChange} aria-label="csv configuration tabs" sx={{ borderBottom: 1, borderColor: 'divider' }}>
                 <Tab label="Properties" />
                 <Tab label="Columns" disabled={true}/>
             </Tabs>
             <TabPanel value={value} index={0}>
                 <Typography sx={{ lineHeight: 'normal' }} variant="body2" color="text.secondary">{description}</Typography>
                 <FormProvider defaultValue={props} onValueChange={(values) => {
-                    Object.assign(props, values);
-                    onChange?.(id, values);
+                    handleWorkflowPropsChange(id, values);  
                 }}>
                     <PowerForm
                         label Width={120}
